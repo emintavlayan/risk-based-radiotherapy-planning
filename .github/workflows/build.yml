@@ -1,0 +1,25 @@
+name: Build and verify
+on:
+    push:
+    pull_request:
+permissions:
+    contents: read
+jobs:
+    verify:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-dotnet@v4
+              with:
+                  dotnet-version: 8.0.x
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+            - name: Run numerical and client state checks
+              run: dotnet run -- RunTestsHeadless
+            - name: Build runnable server and client bundle
+              run: dotnet run -- Bundle
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: risk-based-radiotherapy-planning
+                  path: deploy/
