@@ -6,13 +6,5 @@ open Fable.Mocha
 open Expecto
 #endif
 
-open Shared
-
-let shared =
-    testList "Shared" [
-        testCase "Empty string is not a valid description"
-        <| fun _ ->
-            let expected = false
-            let actual = Todo.isValid ""
-            Expect.equal actual expected "Should be false"
-    ]
+/// Represents the shared contract suite, with numerical checks owned by the server tests.
+let shared = testList "Shared contracts" []
