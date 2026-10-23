@@ -30,7 +30,7 @@ with sync_playwright() as playwright:
     expect(page.locator(".model-detail h2")).to_contain_text("Radiation pneumonitis")
     page.screenshot(path=str(output / "04-ntcp-model-lung-real-safe.png"), full_page=True, animations="disabled")
 
-    page.get_by_role("button", name="Calculator").click()
+    page.get_by_role("button", name="Calculator", exact=True).click()
     expect(page.locator(".estimate-card")).to_have_count(3)
     page.get_by_role("button", name="Detail").click()
     expect(page.locator(".zoom-note")).to_be_visible()
