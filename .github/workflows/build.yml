@@ -1,4 +1,4 @@
-name: Build and verify
+name: Build, verify and capture actual SAFE screenshots
 on:
     push:
     pull_request:
@@ -7,6 +7,7 @@ permissions:
 jobs:
     verify:
         runs-on: ubuntu-latest
+        timeout-minutes: 20
         steps:
             - uses: actions/checkout@v4
             - uses: actions/setup-dotnet@v4
@@ -15,6 +16,9 @@ jobs:
             - uses: actions/setup-node@v4
               with:
                   node-version: 22
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: '3.12'
             - name: Run numerical and client state checks
               run: dotnet run -- RunTestsHeadless
             - name: Build runnable server and client bundle
@@ -23,3 +27,28 @@ jobs:
               with:
                   name: risk-based-radiotherapy-planning
                   path: deploy/
+            - name: Install Chromium
+              run: |
+                  python -m pip install playwright
+                  python -m playwright install --with-deps chromium
+            - name: Start compiled SAFE server
+              run: |
+                  cd deploy
+                  ASPNETCORE_URLS=http://127.0.0.1:8080 nohup dotnet Server.dll > /tmp/safe-server.log 2>&1 &
+                  for i in $(seq 1 90); do
+                      if curl --silent --fail http://127.0.0.1:8080/ > /dev/null; then exit 0; fi
+                      sleep 2
+                  done
+                  cat /tmp/safe-server.log
+                  exit 1
+            - name: Capture real app with live recalculation
+              run: python scripts/capture_safe_screenshots.py
+            - uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: actual-safe-app-screenshots
+                  path: captures/*.png
+                  if-no-files-found: warn
+                  retention-days: 30
+            - if: failure()
+              run: cat /tmp/safe-server.log || true
