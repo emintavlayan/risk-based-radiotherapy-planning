@@ -9,6 +9,9 @@
         <None Include="tailwind.config.js" />
         <None Include="index.html" />
         <None Include="paket.references" />
+        <Compile Include="State.fs" />
+        <Compile Include="Plot.fs" />
+        <Compile Include="ModelCatalogue.fs" />
         <Compile Include="Index.fs" />
         <Compile Include="App.fs" />
         <None Include="vite.config.mts" />
@@ -17,4 +20,7 @@
         <ProjectReference Include="..\Shared\Shared.fsproj" />
     </ItemGroup>
     <Import Project="..\..\.paket\Paket.Restore.targets" />
+    <ItemGroup>
+        <PackageReference Include="FsToolkit.ErrorHandling" Version="5.2.0" />
+    </ItemGroup>
 </Project>
