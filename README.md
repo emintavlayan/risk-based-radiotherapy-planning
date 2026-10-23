@@ -6,18 +6,22 @@ The initial research focus is lymphoma. The intended workflow combines plan dosi
 
 ## Current status
 
-This repository currently contains the SAFE application scaffold. The calculator, model catalogue, and ESAPI integration described below are planned features.
+The first research prototype is implemented: a manual-entry calculator, three published NTCP models, a source-linked model catalogue, and interactive scientific dose-response plots. Synthetic patient and plan data load automatically on startup. Calculations run on the SAFE server.
 
-## First milestone
+## Implemented prototype
 
-Build a manual-entry calculator with:
+The calculator includes:
 
 - A patient and plan section containing age at plan creation, recorded sex, and the dosimetric inputs required by each model.
 - A clinical factors section with clearly labelled selections and toggles.
 - Three published NTCP model definitions, including their endpoints, equations, coefficients, units, applicability, and source publications.
 - Interactive dose-response curves with a marker showing the current plan's input and estimated risk.
 
-Clinical factors will affect a calculation only when the selected model defines that relationship. Each curve and its plan marker will use the same model implementation.
+The included models are cardiac mortality (Hancock / Brodin, linear), radiation pneumonitis (Marks / QUANTEC, logistic), and radiation-induced liver disease (Pan / QUANTEC, LKB with n = 1). Each curve and its plan marker use the same server model implementation.
+
+These three equations use dose only. Age, recorded sex, cardiac risk factors, and chemotherapy are retained as explicit example inputs; the interface states that they do not modify these equations. Future clinical-factor-aware models will use their published relationships.
+
+See [the demo guide](docs/DEMO.md) for a short presentation sequence, exact parameter sources, and server deployment commands. This prototype has not been validated for clinical decisions.
 
 ## Architecture
 
@@ -40,7 +44,7 @@ Manual entry and ESAPI import will feed the same calculation workflow. Patient a
 
 ## Planned direction
 
-1. Manual-entry calculator and documented model catalogue.
+1. Extend the implemented calculator and catalogue with clinical-factor-aware models and model uncertainty.
 2. ESAPI extraction and structure-name / DVH-metric mapping.
 3. Comparison of multiple plans and their individual endpoint estimates.
 4. Life-years-lost calculations with the required survival, prognosis, and competing-risk data.
@@ -57,7 +61,7 @@ Life years lost is one outcome within the broader risk profile. Endpoint probabi
 - Node.js 18 or higher.
 - npm 9 or higher.
 
-The scaffold retains the SAFE template's existing build commands.
+The application retains the SAFE template's existing build commands.
 
 ### Start the application
 
@@ -69,7 +73,7 @@ dotnet run
 
 Open <http://localhost:8080>.
 
-### Run the template tests
+### Run the tests
 
 ```sh
 dotnet run -- WatchRunTests
@@ -90,6 +94,8 @@ dotnet run -- Bundle
 ```
 
 The template also contains an `Azure` target. Its deployment configuration in `Build.fs` must be customised before use.
+
+A multi-stage [Dockerfile](Dockerfile) is included for server hosting. The [demo guide](docs/DEMO.md#run-a-server-bundle) also shows how to run the compiled bundle directly. GitHub Actions runs the numerical and client-state tests and builds an application bundle.
 
 ## Repository layout
 
