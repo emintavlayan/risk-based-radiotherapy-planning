@@ -1,39 +1,41 @@
 module Client.Tests
 
 open Fable.Mocha
-
-open Index
+open State
 open Shared
-open SAFE
 
-let client =
-    testList "Client" [
-        testCase "Added todo"
-        <| fun _ ->
-            let newTodo = Todo.create "new todo"
-            let model, _ = init ()
-            let model, _ = update (SaveTodo(Finished [ newTodo ])) model
+/// Represents client state checks for request ordering and screen navigation.
+let client = testList "Risk calculator state" [
+    testCase "A stale response cannot replace the current plan" <| fun _ ->
+        let model, _ = init ()
+        let current, _ = update (SetForm { model.Form with Heart = "20" }) model
+        let stale, _ = update (Calculated (model.RequestId, Error "obsolete response")) current
+        Expect.equal stale current "Only the most recent request may update results."
 
-            Expect.equal
-                (model.Todos |> RemoteData.map _.Length |> RemoteData.defaultValue 0)
-                1
-                "There should be 1 todo"
+    testCase "Model navigation preserves edited patient and plan data" <| fun _ ->
+        let model, _ = init ()
+        let edited, _ = update (SetForm { model.Form with Label = "Edited plan"; Heart = "22" }) model
+        let selected, _ = update (SelectModel "lung-quantec-marks") edited
+        let returned, _ = update (Navigate Calculator) selected
+        Expect.equal returned.Form edited.Form "Catalogue navigation must preserve the form."
+        Expect.equal selected.Page Models "Selecting a model should open the catalogue."
 
-            Expect.equal
-                (model.Todos
-                 |> RemoteData.map List.head
-                 |> RemoteData.defaultValue (Todo.create ""))
-                newTodo
-                "Todo should equal new todo"
-    ]
+    testCase "Empty numeric input is an error rather than zero" <| fun _ ->
+        let form = { exampleForm () with Heart = "" }
+        match input form with
+        | Error _ -> ()
+        | Ok _ -> failtest "An empty dose must not be accepted."
 
-let all =
-    testList "All" [
-        #if FABLE_COMPILER // This preprocessor directive makes editor happy
-        Shared.Tests.shared
-#endif
-                client
-    ]
+    testCase "Reset example restores the complete synthetic input" <| fun _ ->
+        let model, _ = init ()
+        let edited, _ = update (SetForm { model.Form with Age = "60"; Chemotherapy = false }) model
+        let reset, _ = update ResetExample edited
+        Expect.equal reset.Form (exampleForm ()) "Reset must restore all example inputs."
+]
 
+/// Represents the complete client test suite.
+let all = testList "All" [ Shared.Tests.shared; client ]
+
+/// Runs client tests through the template's Mocha harness.
 [<EntryPoint>]
 let main _ = Mocha.runTests all
