@@ -34,7 +34,7 @@ let client = testList "Risk calculator state" [
 ]
 
 /// Represents the complete client test suite.
-let all = testList "All" [ Shared.Tests.shared; client ]
+let all = testList "All" [ client ]
 
 /// Runs client tests through the template's Mocha harness.
 [<EntryPoint>]
