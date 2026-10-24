@@ -14,7 +14,8 @@ let private parameter symbol value unit description =
 let all = [
     { Organ = Heart; Response = Linear 0.00105
       Definition = {
-        Id = "heart-hancock-brodin"; Organ = "Heart"; Endpoint = "Cardiac mortality"
+        Id = "heart-hancock-brodin"; Organ = "Heart"; OarId = "heart"; Region = "Thorax"; OutputKind = AbsoluteProbability; Availability = Implemented
+        Inputs = [ { OarId = "heart"; Kind = MeanDoseGy; Description = "Mean dose (Gy)" } ]; Endpoint = "Cardiac mortality"
         Name = "Hancock / Brodin"; Family = "Linear"; Color = "#bc5b47"; Version = "1.0"
         Description = "The linear cardiac-mortality model used by Brodin et al. for Hodgkin lymphoma plan comparison, derived from the Hancock cohort. Mean heart dose is the predictor."
         Formula = "NTCP(D) = a · D"
@@ -29,7 +30,8 @@ let all = [
         ParameterSourceUrl = "https://doi.org/10.1016/j.ijrobp.2013.10.028" } }
     { Organ = Lungs; Response = Logistic (-3.87, 0.126)
       Definition = {
-        Id = "lung-quantec-marks"; Organ = "Lungs"; Endpoint = "Radiation pneumonitis"
+        Id = "lung-quantec-marks"; Organ = "Lungs"; OarId = "lungs"; Region = "Thorax"; OutputKind = AbsoluteProbability; Availability = Implemented
+        Inputs = [ { OarId = "lungs"; Kind = MeanDoseGy; Description = "Mean dose (Gy)" } ]; Endpoint = "Radiation pneumonitis"
         Name = "QUANTEC · Marks"; Family = "Logistic"; Color = "#287e99"; Version = "1.0"
         Description = "The published QUANTEC logistic fit relating mean lung dose to symptomatic radiation pneumonitis. Its non-zero intercept is part of the fitted response."
         Formula = "NTCP(D) = 1 / (1 + exp(−(a + b · D)))"
@@ -44,7 +46,8 @@ let all = [
         ParameterSourceUrl = "https://doi.org/10.1016/j.ijrobp.2009.06.091" } }
     { Organ = Liver; Response = MeanDoseLkb (39.8, 0.12)
       Definition = {
-        Id = "liver-quantec-pan"; Organ = "Liver"; Endpoint = "Radiation-induced liver disease"
+        Id = "liver-quantec-pan"; Organ = "Liver"; OarId = "liver"; Region = "Abdomen"; OutputKind = AbsoluteProbability; Availability = Implemented
+        Inputs = [ { OarId = "liver"; Kind = MeanDoseGy; Description = "Mean dose (Gy)" } ]; Endpoint = "Radiation-induced liver disease"
         Name = "QUANTEC · Pan"; Family = "Lyman–Kutcher–Burman"; Color = "#7c62a6"; Version = "1.0"
         Description = "The liver LKB parameter set reproduced in Brodin et al., with n = 1. Effective dose therefore reduces to mean dose. Φ denotes the standard normal cumulative distribution function."
         Formula = "NTCP(D) = Φ((D − TD₅₀) / (m · TD₅₀))"

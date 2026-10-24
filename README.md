@@ -6,7 +6,7 @@ The initial research focus is lymphoma. The intended workflow combines plan dosi
 
 ## Current status
 
-The first research prototype is implemented: a manual-entry calculator, three published NTCP models, a source-linked model catalogue, and interactive scientific dose-response plots. Synthetic patient and plan data load automatically on startup. Calculations run on the SAFE server.
+The research prototype includes a manual-entry calculator, **21 executable dose-response/relative-effect models** (three in the main calculator and 18 additional in the model runner), and a **29-entry model/evidence catalogue** transcribed from Brodin et al. Table 1, spanning **17 OAR categories**. The catalogue distinguishes implementation status, risk measures (NTCP/RR/OR/incidence), and required patient or DVH metrics. Synthetic inputs load automatically, and calculations run on the SAFE server.
 
 ## Implemented prototype
 
@@ -14,14 +14,14 @@ The calculator includes:
 
 - A patient and plan section containing age at plan creation, recorded sex, and the dosimetric inputs required by each model.
 - A clinical factors section with clearly labelled selections and toggles.
-- Three published NTCP model definitions, including their endpoints, equations, coefficients, units, applicability, and source publications.
-- Interactive dose-response curves with a marker showing the current plan's input and estimated risk.
+- A source-linked 29-entry Brodin Table 1 catalogue: 21 executable model equations (including RR/OR as distinct outputs) and 8 blocked/evidence-only entries.
+- Interactive dose-response curves with a marker showing the current plan's input and estimated risk. A manual available-OAR selector controls which implemented models the server evaluates; the catalogue can be filtered independently by organ.
 
-The included models are cardiac mortality (Hancock / Brodin, linear), radiation pneumonitis (Marks / QUANTEC, logistic), and radiation-induced liver disease (Pan / QUANTEC, LKB with n = 1). Each curve and its plan marker use the same server model implementation.
+The initial plan calculator retains cardiac mortality (Hancock / Brodin), radiation pneumonitis (Marks / QUANTEC) and radiation-induced liver disease (Pan / QUANTEC). In the NTCP catalogue, 18 additional models can be evaluated individually using explicit dosimetric and clinical inputs, including differential DVHs. All executable equations run on the server.
 
-These three equations use dose only. Age, recorded sex, cardiac risk factors, and chemotherapy are retained as explicit example inputs; the interface states that they do not modify these equations. Future clinical-factor-aware models will use their published relationships.
+The three original calculator equations use dose only, and its optional clinical factors do not modify them. For the additional multivariable models, age, baseline symptoms and other covariates must be supplied explicitly in the catalogue runner. Missing required values are rejected. RR/OR estimates are not presented as absolute complication probabilities.
 
-See [the demo guide](docs/DEMO.md) for a short presentation sequence, exact parameter sources, and server deployment commands. This prototype has not been validated for clinical decisions.
+See [the full model catalogue and ESAPI eligibility design](docs/MODEL-CATALOGUE.md) for the transcription, readiness classifications and future DVH metric contract. See [the demo guide](docs/DEMO.md) for a short presentation sequence, exact parameter sources, and server deployment commands. This prototype has not been validated for clinical decisions.
 
 ## Architecture
 
@@ -44,7 +44,7 @@ Manual entry and ESAPI import will feed the same calculation workflow. Patient a
 
 ## Planned direction
 
-1. Extend the implemented calculator and catalogue with clinical-factor-aware models and model uncertainty.
+1. Confirm source-specific contour and clinical-input conventions and implement the eight currently blocked/evidence-only models only if adequate original data become available. Model uncertainty and external clinical validation remain future research.
 2. ESAPI extraction and structure-name / DVH-metric mapping.
 3. Comparison of multiple plans and their individual endpoint estimates.
 4. Life-years-lost calculations with the required survival, prognosis, and competing-risk data.
@@ -102,7 +102,7 @@ A multi-stage [Dockerfile](Dockerfile) is included for server hosting. The [demo
 | Path | Purpose |
 | --- | --- |
 | `src/Client` | Fable / Elmish client |
-| `src/Server` | Saturn server |
+| `src/Server` | Saturn server and 29-entry source catalogue |
 | `src/Shared` | Shared F# types and contracts |
 | `tests/Client` | Client tests |
 | `tests/Server` | Server tests |

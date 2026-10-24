@@ -44,7 +44,7 @@ let view model dispatch =
                     Svg.g [
                         svg.clipPath "url(#risk-plot-clip)"
                         svg.children [
-                            for definition in model.Definitions do
+                            for definition in plottedDefinitions model do
                                 match estimates |> List.tryFind (fun estimate -> estimate.ModelId = definition.Id) with
                                 | None -> ()
                                 | Some estimate ->

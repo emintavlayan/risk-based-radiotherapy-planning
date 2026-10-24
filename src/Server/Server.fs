@@ -8,8 +8,9 @@ open Fable.Remoting.Server
 
 /// Creates the typed API around the pure calculation workflow.
 let riskApi _ : IRiskApi = {
-    getModels = fun () -> async { return NtcpModels.definitions () }
+    getModels = fun () -> async { return Catalogue.definitions () }
     evaluatePlan = fun input -> async { return RiskCalculation.evaluate input }
+    evaluateCatalogueModel = fun input -> async { return CatalogueCalculations.evaluate input }
 }
 
 /// Logs an unexpected API failure while keeping internal details out of client responses.
