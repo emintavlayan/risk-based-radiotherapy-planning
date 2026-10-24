@@ -9,6 +9,21 @@ let private brodin = "Brodin et al., IJROBP 2014;88:433–445, Table 1 (online 2
 /// Represents the canonical paper URL without inventing links to original studies.
 let private sourceUrl = "https://doi.org/10.1016/j.ijrobp.2013.10.028"
 
+/// Links each independently verified publication; unknown source links retain the Brodin table provenance.
+let private primaryPublication = function
+    | "parotid-beetz-2011" | "submandibular-beetz-2011" ->
+        "https://www.thegreenjournal.com/article/S0167-8140%2811%2900202-7/fulltext"
+    | "thyroid-vogelius-2011" -> "https://doi.org/10.1002/cncr.26186"
+    | "thyroid-boomsma-2012" -> "https://pubmed.ncbi.nlm.nih.gov/22717243/"
+    | "neck-weakness-vanleeuwen-2012" -> "https://pubmed.ncbi.nlm.nih.gov/21288655/"
+    | "larynx-edema-rancati-2009" -> "https://pubmed.ncbi.nlm.nih.gov/19747783/"
+    | "larynx-dysphagia-rancati-2010" -> "https://pubmed.ncbi.nlm.nih.gov/20171520/"
+    | "esophagus-stricture-alevronta-2010" -> "https://pubmed.ncbi.nlm.nih.gov/20557965/"
+    | "esophagus-esophagitis-belderbos-2005" -> "https://pubmed.ncbi.nlm.nih.gov/15890421/"
+    | "lung-pneumonitis-huang-2011" -> "https://pmc.ncbi.nlm.nih.gov/articles/PMC4041523/"
+    | "kidney-injury-cassady-1995" -> "https://pubmed.ncbi.nlm.nih.gov/7713786/"
+    | _ -> sourceUrl
+
 /// Creates a published model coefficient with its reported unit.
 let private coefficient symbol value unit description =
     { Symbol = symbol; Value = value; Unit = unit; Description = description }
@@ -71,7 +86,7 @@ let private entry id organId endpoint study family formula parameters inputs kin
       TimeHorizon = "As defined in the original endpoint study; see Brodin Table 2."
       Limitations = limitations
       Citation = study + "; transcribed from " + brodin
-      PaperUrl = sourceUrl; ParameterSourceUrl = sourceUrl }
+      PaperUrl = primaryPublication id; ParameterSourceUrl = sourceUrl }
 
 /// Represents every Table 1 entry not already implemented in the original prototype.
 let private additional = [
