@@ -25,8 +25,11 @@ type RiskOutputKind = AbsoluteProbability | RelativeRisk | OddsRatio | BaselineA
 /// Represents whether the catalogue entry is ready for server evaluation.
 type ModelAvailability = Implemented | RequiresImplementation | MissingParameters | NoDoseResponse
 
+/// Represents the declared fractionation basis of a differential DVH.
+type DvhDoseBasis = PhysicalGy | EqD2Gy of alphaBetaGy: float
+
 /// Represents a typed requirement for a future ESAPI/DVH or clinical-data input.
-type ModelInputKind = MeanDoseGy | SparedGlandMeanDoseGy | DoseAtVolumePercent of float | DifferentialDvh | VolumeCm3 | ClinicalVariable of string | BaselineIncidence
+type ModelInputKind = MeanDoseGy | SparedGlandMeanDoseGy | DoseAtVolumePercent of float | DifferentialDvh of DvhDoseBasis | VolumeCm3 | ClinicalVariable of string | BaselineIncidence
 
 /// Represents one required metric with a canonical OAR identifier.
 type ModelInput = { OarId: string; Kind: ModelInputKind; Description: string }
@@ -68,7 +71,7 @@ type MetricMeasurement = { OarId: string; Kind: ModelInputKind; Value: float }
 type DvhBin = { DoseGy: float; VolumeFraction: float }
 
 /// Represents an organ differential DVH with bins summing to unity.
-type OrganDvh = { OarId: string; Bins: DvhBin list }
+type OrganDvh = { OarId: string; DoseBasis: DvhDoseBasis; Bins: DvhBin list }
 
 /// Represents all explicit measurements required to evaluate one catalogue entry.
 type CatalogueEvaluationInput = { ModelId: string; Measurements: MetricMeasurement list; Histograms: OrganDvh list }
