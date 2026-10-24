@@ -66,12 +66,16 @@ let server = testList "NTCP calculations" [
             "small-bowel-toxicity-eich-2005", "small-bowel", 32.0 ] do
             let bins = [ { DoseGy = d50; VolumeFraction = 0.3 }
                          { DoseGy = d50; VolumeFraction = 0.7 } ]
-            let req = { ModelId = id; Measurements = []; Histograms = [ { OarId = organ; Bins = bins } ] }
+            let basis = if organ = "larynx" then EqD2Gy 3.0 elif organ = "esophagus" then EqD2Gy 10.0 else PhysicalGy
+            let req = { ModelId = id; Measurements = []; Histograms = [ { OarId = organ; DoseBasis = basis; Bins = bins } ] }
             let result = CatalogueCalculations.evaluate req |> requireOk
             Expect.isLessThan (abs (result.Value - 0.5)) 1e-7 "Uniform DVH at TD50 must give 50%."
         let invalid = { ModelId = "larynx-edema-rancati-2009"; Measurements = []
-                        Histograms = [ { OarId = "larynx"; Bins = [ { DoseGy = 40.0; VolumeFraction = 0.8 } ] } ] }
+                        Histograms = [ { OarId = "larynx"; DoseBasis = EqD2Gy 3.0; Bins = [ { DoseGy = 40.0; VolumeFraction = 0.8 } ] } ] }
         Expect.isError (CatalogueCalculations.evaluate invalid) "Non-unit DVHs must fail."
+        let physical = { ModelId = "larynx-edema-rancati-2009"; Measurements = []
+                         Histograms = [ { OarId = "larynx"; DoseBasis = PhysicalGy; Bins = [ { DoseGy = 47.3; VolumeFraction = 1.0 } ] } ] }
+        Expect.isError (CatalogueCalculations.evaluate physical) "Larynx EQD2 model must reject an uncorrected physical DVH."
 
     testCase "Logit power is zero at zero dose and fifty percent at D50" <| fun _ ->
         let request dose = { ModelId = "larynx-dysphagia-rancati-2010"; Measurements = [
