@@ -4,6 +4,7 @@ open System
 open FsToolkit.ErrorHandling
 open Shared
 open RiskBasedRadiotherapyPlanning.Domain
+open RiskBasedRadiotherapyPlanning.NtcpModels
 
 /// Represents the published model IDs with unambiguous evaluable dose-response mathematics.
 let executableIds =
@@ -181,4 +182,11 @@ let evaluate (request: CatalogueEvaluationInput) : Result<CatalogueEvaluation, s
     | "lung-cancer-travis-2002" -> withRelative id "lungs" 0.141 RelativeRisk request
     | "breast-cancer-travis-2003" -> withRelative id "breast" 0.149 RelativeRisk request
     | "stomach-cancer-vandenbelt-2009" -> withRelative id "stomach" 0.84 RelativeRisk request
+    | "heart-hancock-brodin" | "lung-quantec-marks" | "liver-quantec-pan" ->
+        result {
+            let model = NtcpModels.all |> List.find (fun item -> item.Definition.Id = id)
+            let organId = model.Definition.OarId
+            let! dose = metric organId MeanDoseGy request
+            return! response id AbsoluteProbability dose ("Mean " + organId + " dose (Gy)") (DoseResponse.evaluate model.Response)
+        }
     | _ -> Error ("This model has not been validated for computation: " + id)
