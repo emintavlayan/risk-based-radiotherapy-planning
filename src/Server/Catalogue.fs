@@ -156,7 +156,7 @@ let private additional = [
     entry "esophagus-esophagitis-belderbos-2005" "esophagus" "Esophagitis" "Belderbos et al. (2005)"
         "EUD–LKB" "NTCP = Φ((EUD_n − TD₅₀)/(m · TD₅₀))"
         [ coefficient "n" 0.69 "—" "0.18–6.3"; coefficient "m" 0.36 "—" "0.25–0.55"; coefficient "TD₅₀" 47.0 "Gy" "41–60 Gy" ]
-        [ dvh "esophagus" ] AbsoluteProbability RequiresImplementation
+        [ dvh "esophagus" PhysicalGy ] AbsoluteProbability RequiresImplementation
         "Requires full DVH and precise EUD convention used in the study."
     entry "esophagus-cancer-morton-2012" "esophagus" "Esophageal cancer" "Morton et al. (2012)"
         "Linear odds ratio" "OR = 1 + 0.09 · mean esophageal dose"
