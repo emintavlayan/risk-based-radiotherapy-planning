@@ -20,11 +20,11 @@ let private measureText = function
     | NoRiskEstimate -> "No calculable risk estimate"
 
 /// Displays one labelled field of clinical evidence.
-let private evidence label value =
+let private evidence (label: string) (value: string) =
     Html.div [ prop.className "evidence-item"; prop.children [ Html.dt label; Html.dd value ] ]
 
 /// Displays an external publication link.
-let private paperLink label url =
+let private paperLink (label: string) (url: string) =
     Html.a [ prop.className "paper-link"; prop.href url; prop.target "_blank"; prop.rel "noopener noreferrer"; prop.text label ]
 
 /// Displays the full OAR-filtered source catalogue, including non-executable entries.
