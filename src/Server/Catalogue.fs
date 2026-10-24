@@ -130,7 +130,7 @@ let private additional = [
         "Fitted from historical Hodgkin lymphoma cohorts; check population and endpoint timing."
     entry "thyroid-boomsma-2012" "thyroid" "Hypothyroidism" "Boomsma et al. (2012)"
         "Multivariable logistic" "NTCP = logistic(0.011 + 0.062 D_thyroid − 0.19 V_thyroid)"
-        [ coefficient "intercept" 0.011 "—" ""; coefficient "dose" 0.062 "Gy⁻¹" ""; coefficient "volume" -0.19 "source-defined" "" ]
+        [ coefficient "intercept" 0.011 "—" ""; coefficient "dose" 0.062 "Gy⁻¹" ""; coefficient "volume" -0.19 "cm⁻³" "" ]
         [ meanDose "thyroid"; volume "thyroid" ] AbsoluteProbability RequiresImplementation
         "Verify thyroid volume units and model contour requirements from the original publication."
     entry "neck-weakness-vanleeuwen-2012" "neck-muscles" "Neck muscle weakness" "van Leeuwen-Segarceanu et al. (2012)"
@@ -145,7 +145,7 @@ let private additional = [
         "Requires a complete larynx DVH and source definition of endpoint and effective dose."
     entry "larynx-dysphagia-rancati-2010" "larynx" "Dysphagia" "Rancati / QUANTEC (2010)"
         "Logit" "NTCP = 1/(1 + (D₅₀/D)^k)"
-        [ coefficient "D₅₀" 57.5 "Gy" ""; coefficient "k" 6.57 "Gy" "" ]
+        [ coefficient "D₅₀" 57.5 "Gy" ""; coefficient "k" 6.57 "dimensionless" "" ]
         [ meanDose "supraglottic-larynx" ] AbsoluteProbability RequiresImplementation
         "Aspiration response against mean supraglottic larynx dose; logit model uses dose-ratio exponent k."
     entry "esophagus-stricture-alevronta-2010" "esophagus" "Esophageal stricture" "Alevronta et al. (2010)"
