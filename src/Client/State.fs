@@ -17,6 +17,8 @@ type Model = {
     Page: Page; Form: Form; Definitions: ModelDefinition list; Evaluation: PlanEvaluation option
     Error: string option; Busy: bool; RequestId: int; SelectedModel: string; FocusedModel: string option; Zoom: bool
     CatalogueOar: string option
+    CatalogueValues: Map<string, string>; CatalogueEvaluation: CatalogueEvaluation option
+    CatalogueError: string option; CatalogueBusy: bool
 }
 
 /// Represents explicit user actions and asynchronous server results.
@@ -28,6 +30,9 @@ type Msg =
     | FocusModel of string option
     | SetZoom of bool
     | FilterCatalogueOar of string option
+    | SetCatalogueValue of string * string
+    | EvaluateCatalogueModel
+    | CatalogueModelEvaluated of string * Result<CatalogueEvaluation, string>
     | ModelsLoaded of Result<ModelDefinition list, string>
     | Calculated of int * Result<PlanEvaluation, string>
 
@@ -62,6 +67,48 @@ let input form =
         }
     }
 
+
+/// Names a numerical input unambiguously across different organ structures and DVH metrics.
+let catalogueInputKey (input: ModelInput) =
+    input.OarId + "|" + sprintf "%A" input.Kind
+
+/// Parses a normalised differential DVH from a comma-separated series of doseGy:volumeFraction bins.
+let private parseDifferentialDvh label (value: string) =
+    result {
+        do! (not (String.IsNullOrWhiteSpace value)) |> Result.requireTrue ("Enter a full differential DVH for " + label + ".")
+        let entries = value.Split([| ','; '\n'; ';' |], StringSplitOptions.RemoveEmptyEntries) |> Array.toList
+        let! bins =
+            entries |> List.traverseResultM (fun entry ->
+                let parts = entry.Trim().Split ':'
+                if parts.Length <> 2 then Error ("DVH bin must use doseGy:volumeFraction for " + label + ".")
+                else
+                    result {
+                        let! dose = number "DVH dose in Gy" parts.[0]
+                        let! fraction = number "DVH fractional volume" parts.[1]
+                        return { DoseGy = dose; VolumeFraction = fraction }
+                    })
+        return { OarId = label; Bins = bins }
+    }
+
+/// Parses a model's exact required scalar inputs and full DVH inputs for the server.
+let catalogueInput (definition: ModelDefinition) (values: Map<string, string>) =
+    result {
+        let read input = Map.tryFind (catalogueInputKey input) values |> Option.defaultValue ""
+        let! measurements =
+            definition.Inputs
+            |> List.filter (fun input -> input.Kind <> DifferentialDvh)
+            |> List.traverseResultM (fun input ->
+                result {
+                    let! value = number input.Description (read input)
+                    return { OarId = input.OarId; Kind = input.Kind; Value = value }
+                })
+        let! histograms =
+            definition.Inputs
+            |> List.filter (fun input -> input.Kind = DifferentialDvh)
+            |> List.traverseResultM (fun input -> parseDifferentialDvh input.OarId (read input))
+        return { ModelId = definition.Id; Measurements = measurements; Histograms = histograms }
+    }
+
 /// Requests a calculation and attaches a generation to reject stale responses.
 let private calculate model =
     let requestId = model.RequestId + 1
@@ -76,6 +123,7 @@ let init () =
     let model = {
         Page = Calculator; Form = exampleForm (); Definitions = []; Evaluation = None
         Error = None; Busy = true; RequestId = 0; SelectedModel = "heart-hancock-brodin"; FocusedModel = None; Zoom = false; CatalogueOar = None
+        CatalogueValues = Map.empty; CatalogueEvaluation = None; CatalogueError = None; CatalogueBusy = false
     }
     let calculated, command = calculate model
     let models = Cmd.OfAsync.either api.getModels () (Ok >> ModelsLoaded) (fun _ -> ModelsLoaded (Error "The model catalogue could not be loaded. Refresh to try again."))
@@ -87,7 +135,7 @@ let update message model =
     | SetForm form -> calculate { model with Form = form }
     | ResetExample -> calculate { model with Form = exampleForm () }
     | Navigate page -> { model with Page = page; FocusedModel = None }, Cmd.none
-    | SelectModel id -> { model with SelectedModel = id; Page = Models }, Cmd.none
+    | SelectModel id -> { model with SelectedModel = id; Page = Models; CatalogueValues = Map.empty; CatalogueEvaluation = None; CatalogueError = None; CatalogueBusy = false }, Cmd.none
     | FocusModel id -> { model with FocusedModel = id }, Cmd.none
     | SetZoom zoom -> { model with Zoom = zoom }, Cmd.none
     | FilterCatalogueOar oar ->
@@ -96,7 +144,27 @@ let update message model =
             | Some id -> model.Definitions |> List.tryFind (fun d -> d.OarId = id)
             | None -> model.Definitions |> List.tryHead
         let selectedId = selection |> Option.map _.Id |> Option.defaultValue model.SelectedModel
-        { model with CatalogueOar = oar; SelectedModel = selectedId }, Cmd.none
+        { model with CatalogueOar = oar; SelectedModel = selectedId; CatalogueValues = Map.empty; CatalogueEvaluation = None; CatalogueError = None; CatalogueBusy = false }, Cmd.none
+    | SetCatalogueValue (key, value) ->
+        { model with CatalogueValues = Map.add key value model.CatalogueValues; CatalogueEvaluation = None; CatalogueError = None }, Cmd.none
+    | EvaluateCatalogueModel ->
+        match model.Definitions |> List.tryFind (fun d -> d.Id = model.SelectedModel) with
+        | None -> { model with CatalogueError = Some "Select a catalogue model first." }, Cmd.none
+        | Some definition when definition.Availability <> Implemented ->
+            { model with CatalogueError = Some "This entry is not executable. See the applicability notes." }, Cmd.none
+        | Some definition ->
+            match catalogueInput definition model.CatalogueValues with
+            | Error error -> { model with CatalogueError = Some error; CatalogueEvaluation = None; CatalogueBusy = false }, Cmd.none
+            | Ok request ->
+                let command = Cmd.OfAsync.either api.evaluateCatalogueModel request
+                                  (fun answer -> CatalogueModelEvaluated (definition.Id, answer))
+                                  (fun _ -> CatalogueModelEvaluated (definition.Id, Error "Could not reach the calculation server."))
+                { model with CatalogueBusy = true; CatalogueError = None; CatalogueEvaluation = None }, command
+    | CatalogueModelEvaluated (id, _) when id <> model.SelectedModel -> model, Cmd.none
+    | CatalogueModelEvaluated (_, Ok value) ->
+        { model with CatalogueEvaluation = Some value; CatalogueError = None; CatalogueBusy = false }, Cmd.none
+    | CatalogueModelEvaluated (_, Error error) ->
+        { model with CatalogueEvaluation = None; CatalogueError = Some error; CatalogueBusy = false }, Cmd.none
     | ModelsLoaded (Ok definitions) -> { model with Definitions = definitions }, Cmd.none
     | ModelsLoaded (Error error) -> { model with Error = Some error; Busy = false }, Cmd.none
     | Calculated (id, _) when id <> model.RequestId -> model, Cmd.none
