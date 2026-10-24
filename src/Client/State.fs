@@ -10,12 +10,13 @@ open Shared
 type Page = Calculator | Models
 
 /// Represents editable numeric text without coercing empty fields to zero.
-type Form = { Label: string; Age: string; Sex: Sex; Heart: string; Lung: string; Liver: string; CardiacRiskFactors: bool; Chemotherapy: bool }
+type Form = { Label: string; Age: string; Sex: Sex; Heart: string; Lung: string; Liver: string; CardiacRiskFactors: bool; Chemotherapy: bool; AvailableOars: string list }
 
 /// Represents the client state and the generation of its latest calculation request.
 type Model = {
     Page: Page; Form: Form; Definitions: ModelDefinition list; Evaluation: PlanEvaluation option
     Error: string option; Busy: bool; RequestId: int; SelectedModel: string; FocusedModel: string option; Zoom: bool
+    CatalogueOar: string option
 }
 
 /// Represents explicit user actions and asynchronous server results.
@@ -26,6 +27,7 @@ type Msg =
     | SelectModel of string
     | FocusModel of string option
     | SetZoom of bool
+    | FilterCatalogueOar of string option
     | ModelsLoaded of Result<ModelDefinition list, string>
     | Calculated of int * Result<PlanEvaluation, string>
 
@@ -35,7 +37,7 @@ let api = Api.makeProxy<IRiskApi> ()
 /// Converts synthetic example values into editable form fields.
 let exampleForm () = {
     Label = Example.plan.PlanLabel; Age = "42"; Sex = Example.plan.Sex
-    Heart = "18.0"; Lung = "14.0"; Liver = "26.0"
+    Heart = "18.0"; Lung = "14.0"; Liver = "26.0"; AvailableOars = Example.plan.AvailableOarIds
     CardiacRiskFactors = Example.plan.CardiacRiskFactors; Chemotherapy = Example.plan.Chemotherapy
 }
 
@@ -55,6 +57,7 @@ let input form =
         return {
             PlanLabel = form.Label; AgeAtPlanCreation = age; Sex = form.Sex
             MeanHeartDoseGy = heart; MeanLungDoseGy = lung; MeanLiverDoseGy = liver
+            AvailableOarIds = form.AvailableOars
             CardiacRiskFactors = form.CardiacRiskFactors; Chemotherapy = form.Chemotherapy
         }
     }
@@ -72,7 +75,7 @@ let private calculate model =
 let init () =
     let model = {
         Page = Calculator; Form = exampleForm (); Definitions = []; Evaluation = None
-        Error = None; Busy = true; RequestId = 0; SelectedModel = "heart-hancock-brodin"; FocusedModel = None; Zoom = false
+        Error = None; Busy = true; RequestId = 0; SelectedModel = "heart-hancock-brodin"; FocusedModel = None; Zoom = false; CatalogueOar = None
     }
     let calculated, command = calculate model
     let models = Cmd.OfAsync.either api.getModels () (Ok >> ModelsLoaded) (fun _ -> ModelsLoaded (Error "The model catalogue could not be loaded. Refresh to try again."))
@@ -87,6 +90,7 @@ let update message model =
     | SelectModel id -> { model with SelectedModel = id; Page = Models }, Cmd.none
     | FocusModel id -> { model with FocusedModel = id }, Cmd.none
     | SetZoom zoom -> { model with Zoom = zoom }, Cmd.none
+    | FilterCatalogueOar oar -> { model with CatalogueOar = oar }, Cmd.none
     | ModelsLoaded (Ok definitions) -> { model with Definitions = definitions }, Cmd.none
     | ModelsLoaded (Error error) -> { model with Error = Some error; Busy = false }, Cmd.none
     | Calculated (id, _) when id <> model.RequestId -> model, Cmd.none
@@ -98,3 +102,25 @@ let riskText probability =
     if probability = 0.0 then "0.00"
     elif probability * 100.0 < 0.01 then "<0.01"
     else sprintf "%.2f" (probability * 100.0)
+
+/// Returns definitions whose implementation produced an estimate for this plan.
+let plottedDefinitions model =
+    let ids =
+        model.Evaluation
+        |> Option.map (fun value -> value.Estimates |> List.map _.ModelId |> Set.ofList)
+        |> Option.defaultValue Set.empty
+    model.Definitions |> List.filter (fun definition -> Set.contains definition.Id ids)
+
+/// Returns the canonical organ filter without discarding the all-organ catalogue view.
+let catalogueDefinitions model =
+    match model.CatalogueOar with
+    | None -> model.Definitions
+    | Some organ -> model.Definitions |> List.filter (fun definition -> definition.OarId = organ)
+
+/// Selects the published models whose OARs are explicitly available from dosimetry.
+let toggleAvailableOar oar form =
+    let selected = Set.ofList form.AvailableOars
+    let updated =
+        if Set.contains oar selected then Set.remove oar selected
+        else Set.add oar selected
+    { form with AvailableOars = Set.toList updated }
