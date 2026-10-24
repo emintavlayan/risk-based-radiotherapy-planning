@@ -62,14 +62,15 @@ let private metric oar kind (request: CatalogueEvaluationInput) =
     | _ -> Error ("Duplicate numeric measurement: " + key)
 
 /// Retrieves exactly one differential DVH with finite physical dose and unit-sum fractional volumes.
-let private histogram oar (request: CatalogueEvaluationInput) =
+let private histogram oar expectedBasis (request: CatalogueEvaluationInput) =
     let matches = request.Histograms |> List.filter (fun h -> h.OarId = oar)
     match matches with
     | [] -> Error ("Missing full differential DVH for " + oar)
     | [ dvh ] ->
         let bins = dvh.Bins
         let total = bins |> List.sumBy _.VolumeFraction
-        if List.isEmpty bins then Error ("Empty DVH for " + oar)
+        if dvh.DoseBasis <> expectedBasis then Error ("Incorrect dose basis for " + oar + "; expected " + sprintf "%A" expectedBasis)
+        elif List.isEmpty bins then Error ("Empty DVH for " + oar)
         elif bins |> List.exists (fun bin -> not (Double.IsFinite bin.DoseGy && Double.IsFinite bin.VolumeFraction) || bin.DoseGy < 0.0 || bin.DoseGy > 150.0 || bin.VolumeFraction <= 0.0 || bin.VolumeFraction > 1.0) then
             Error ("Invalid dose or differential volume fraction for " + oar)
         elif abs (total - 1.0) > 1e-6 then
@@ -100,9 +101,9 @@ let private withGamma id oar kind d50 gamma label request =
     }
 
 /// Evaluates a differential-DVH LKB model without replacing EUD with mean dose.
-let private withLkb id organ td50 m n request =
+let private withLkb id organ basis td50 m n request =
     result {
-        let! bins = histogram organ request
+        let! bins = histogram organ basis request
         let effective = equivalentDose n bins
         return! response id AbsoluteProbability effective ("gEUD (" + organ + "), Gy") (lkb td50 m)
     }
@@ -175,9 +176,9 @@ let evaluate (request: CatalogueEvaluationInput) : Result<CatalogueEvaluation, s
     | "thyroid-boomsma-2012" -> thyroidBoomsma id request
     | "lung-pneumonitis-huang-2011" -> lungHuang id request
     | "larynx-dysphagia-rancati-2010" -> larynxDysphagia id request
-    | "larynx-edema-rancati-2009" -> withLkb id "larynx" 47.3 0.23 1.17 request
-    | "esophagus-esophagitis-belderbos-2005" -> withLkb id "esophagus" 47.0 0.36 0.69 request
-    | "small-bowel-toxicity-eich-2005" -> withLkb id "small-bowel" 32.0 0.17 0.09 request
+    | "larynx-edema-rancati-2009" -> withLkb id "larynx" (EqD2Gy 3.0) 47.3 0.23 1.17 request
+    | "esophagus-esophagitis-belderbos-2005" -> withLkb id "esophagus" (EqD2Gy 10.0) 47.0 0.36 0.69 request
+    | "small-bowel-toxicity-eich-2005" -> withLkb id "small-bowel" PhysicalGy 32.0 0.17 0.09 request
     | "esophagus-cancer-morton-2012" -> withRelative id "esophagus" 0.09 OddsRatio request
     | "lung-cancer-travis-2002" -> withRelative id "lungs" 0.141 RelativeRisk request
     | "breast-cancer-travis-2003" -> withRelative id "breast" 0.149 RelativeRisk request
