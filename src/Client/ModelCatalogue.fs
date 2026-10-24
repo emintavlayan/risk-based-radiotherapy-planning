@@ -71,7 +71,7 @@ let private runner (definition: ModelDefinition) model dispatch =
                 Html.div [ prop.className "runner-field"; prop.children [
                     Html.label [ prop.text ((if metric.OarId = "" then "Clinical" else metric.OarId) + " · " + metric.Description) ]
                     match metric.Kind with
-                    | DifferentialDvh ->
+                    | DifferentialDvh basis ->
                         Html.div [
                             Html.textarea [
                                 prop.value value
@@ -79,7 +79,7 @@ let private runner (definition: ModelDefinition) model dispatch =
                                 prop.rows 3
                                 prop.onChange (fun (value: string) -> dispatch (SetCatalogueValue (key, value)))
                             ]
-                            Html.small "Differential DVH as doseGy:fraction bins. Fractions must sum to 1. Use bins from the defined OAR, not a cumulative DVH."
+                            Html.small ("Differential DVH as doseGy:fraction bins in " + (match basis with | PhysicalGy -> "physical dose (Gy)" | EqD2Gy ab -> sprintf "EQD2 Gy using α/β = %g Gy" ab) + ". Fractions must sum to 1; cumulative DVHs are not accepted.")
                         ]
                     | _ ->
                         Html.input [
