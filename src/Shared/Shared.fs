@@ -26,7 +26,7 @@ type RiskOutputKind = AbsoluteProbability | RelativeRisk | OddsRatio | BaselineA
 type ModelAvailability = Implemented | RequiresImplementation | MissingParameters | NoDoseResponse
 
 /// Represents a typed requirement for a future ESAPI/DVH or clinical-data input.
-type ModelInputKind = MeanDoseGy | DoseAtVolumePercent of float | DifferentialDvh | VolumeCm3 | ClinicalVariable of string | BaselineIncidence
+type ModelInputKind = MeanDoseGy | SparedGlandMeanDoseGy | DoseAtVolumePercent of float | DifferentialDvh | VolumeCm3 | ClinicalVariable of string | BaselineIncidence
 
 /// Represents one required metric with a canonical OAR identifier.
 type ModelInput = { OarId: string; Kind: ModelInputKind; Description: string }
