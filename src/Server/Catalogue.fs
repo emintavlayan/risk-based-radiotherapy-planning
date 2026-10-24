@@ -17,7 +17,9 @@ let private coefficient symbol value unit description =
 let private meanDose oar = { OarId = oar; Kind = MeanDoseGy; Description = "Mean organ dose (Gy)" }
 
 /// Creates a required full differential dose-volume histogram for volume-effect models.
-let private dvh oar = { OarId = oar; Kind = DifferentialDvh; Description = "Full differential DVH with dose and volume units" }
+let private dvh oar doseBasis =
+    let basisText = match doseBasis with | PhysicalGy -> "physical Gy" | EqD2Gy alphaBeta -> sprintf "EQD2 Gy (α/β = %g Gy)" alphaBeta
+    { OarId = oar; Kind = DifferentialDvh doseBasis; Description = "Full differential DVH in " + basisText + ", fractional volume" }
 
 /// Creates a required clinical covariate that cannot be extracted from the DVH.
 let private clinical name = { OarId = ""; Kind = ClinicalVariable name; Description = name }
@@ -124,7 +126,7 @@ let private additional = [
     entry "larynx-edema-rancati-2009" "larynx" "Laryngeal edema" "Rancati et al. (2009)"
         "LKB" "NTCP = Φ((EUD_n − TD₅₀)/(m · TD₅₀))"
         [ coefficient "n" 1.17 "—" "±0.6"; coefficient "m" 0.23 "—" "±0.07"; coefficient "TD₅₀" 47.3 "Gy" "±2.1 Gy" ]
-        [ dvh "larynx" ] AbsoluteProbability RequiresImplementation
+        [ dvh "larynx" (EqD2Gy 3.0) ] AbsoluteProbability RequiresImplementation
         "Requires a complete larynx DVH and source definition of endpoint and effective dose."
     entry "larynx-dysphagia-rancati-2010" "larynx" "Dysphagia" "Rancati / QUANTEC (2010)"
         "Logit" "NTCP = 1/(1 + (D₅₀/D)^k)"
@@ -134,7 +136,7 @@ let private additional = [
     entry "esophagus-stricture-alevronta-2010" "esophagus" "Esophageal stricture" "Alevronta et al. (2010)"
         "Relative seriality" "Relative-seriality model (γ, s, D₅₀); complete DVH required"
         [ coefficient "γ" 1.4 "—" "68% CI 0.8–2.6"; coefficient "s" 0.1 "—" "68% CI 0.01–0.3"; coefficient "D₅₀" 61.5 "Gy" "68% CI 52.9–84.9 Gy" ]
-        [ dvh "esophagus" ] AbsoluteProbability RequiresImplementation
+        [ dvh "esophagus" (EqD2Gy 10.0) ] AbsoluteProbability RequiresImplementation
         "Relative seriality requires full voxel-volume discretization and original study normalization."
     entry "esophagus-esophagitis-belderbos-2005" "esophagus" "Esophagitis" "Belderbos et al. (2005)"
         "EUD–LKB" "NTCP = Φ((EUD_n − TD₅₀)/(m · TD₅₀))"
@@ -186,7 +188,7 @@ let private additional = [
     entry "small-bowel-toxicity-eich-2005" "small-bowel" "Gastrointestinal toxicity" "Eich et al. (2005)"
         "LKB" "NTCP = Φ((EUD_n − TD₅₀)/(m · TD₅₀))"
         [ coefficient "m" 0.17 "—" ""; coefficient "n" 0.09 "—" ""; coefficient "TD₅₀" 32.0 "Gy" "" ]
-        [ dvh "small-bowel" ] AbsoluteProbability RequiresImplementation
+        [ dvh "small-bowel" PhysicalGy ] AbsoluteProbability RequiresImplementation
         "Requires complete small-bowel DVH with consistent anatomy and volume-effect calculation."
     entry "colon-cancer-hodgson-2007" "colon" "Colon cancer" "Hodgson et al. (2007)"
         "Cohort relative risk only" "Reported cohort RR = 4.3; no dose-response equation"
