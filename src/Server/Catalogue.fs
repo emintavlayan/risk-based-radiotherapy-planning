@@ -81,8 +81,8 @@ let private additional = [
     entry "parotid-houweling-2010" "parotids" "Xerostomia" "Houweling et al. (2010)"
         "Logistic" "NTCP = 1/(1 + exp(−4γ₅₀(D/D₅₀ − 1)))"
         [ coefficient "D₅₀" 32.4 "Gy" "26.3–39.9 Gy"; coefficient "γ₅₀" 0.97 "—" "0.58–1.53" ]
-        [ meanDose "parotids" ] AbsoluteProbability RequiresImplementation
-        "Study endpoint is 1-year grade 4 xerostomia assessed by salivary flow; gland-selection rule must be confirmed."
+        [ { OarId = "parotids"; Kind = SparedGlandMeanDoseGy; Description = "Mean dose of least-irradiated parotid gland (Gy)" } ] AbsoluteProbability RequiresImplementation
+        "Study endpoint is 1-year grade 4 xerostomia assessed by salivary flow; least-irradiated parotid is required."
     entry "parotid-beetz-2011" "parotids" "Xerostomia" "Beetz et al. (2011)"
         "Multivariable logistic" "NTCP = logistic(−5.27 + 0.066 D_parotid + 0.050 age + 0.916 baseline)"
         [ coefficient "intercept" -5.27 "—" ""; coefficient "dose" 0.066 "Gy⁻¹" ""; coefficient "age" 0.050 "year⁻¹" ""; coefficient "baseline" 0.916 "—" "" ]
@@ -127,10 +127,10 @@ let private additional = [
         [ dvh "larynx" ] AbsoluteProbability RequiresImplementation
         "Requires a complete larynx DVH and source definition of endpoint and effective dose."
     entry "larynx-dysphagia-rancati-2010" "larynx" "Dysphagia" "Rancati / QUANTEC (2010)"
-        "Logit" "NTCP = 1/(1 + exp((D₅₀ − D)/k))"
+        "Logit" "NTCP = 1/(1 + (D₅₀/D)^k)"
         [ coefficient "D₅₀" 57.5 "Gy" ""; coefficient "k" 6.57 "Gy" "" ]
-        [ meanDose "larynx" ] AbsoluteProbability RequiresImplementation
-        "Confirm the dose metric and logit parameterization from the original study."
+        [ meanDose "supraglottic-larynx" ] AbsoluteProbability RequiresImplementation
+        "Aspiration response against mean supraglottic larynx dose; logit model uses dose-ratio exponent k."
     entry "esophagus-stricture-alevronta-2010" "esophagus" "Esophageal stricture" "Alevronta et al. (2010)"
         "Relative seriality" "Relative-seriality model (γ, s, D₅₀); complete DVH required"
         [ coefficient "γ" 1.4 "—" "68% CI 0.8–2.6"; coefficient "s" 0.1 "—" "68% CI 0.01–0.3"; coefficient "D₅₀" 61.5 "Gy" "68% CI 52.9–84.9 Gy" ]
@@ -202,7 +202,9 @@ let private additional = [
 /// Returns the complete Table 1 inventory, including the original implemented models.
 let definitions () =
     let included = NtcpModels.all |> List.map _.Definition
-    included @ additional
+    included @ (additional |> List.map (fun model ->
+        if CatalogueCalculations.executableIds.Contains model.Id then { model with Availability = Implemented }
+        else model))
 
 /// Returns the distinct canonical OAR identifiers used for catalogue filtering.
 let organs () =
