@@ -18,6 +18,94 @@ let private assertProbability id expected tolerance input =
 
 /// Represents numerical and validation checks for the published calculation workflow.
 let server = testList "NTCP calculations" [
+    testCase "Gamma-50 logistic has fifty percent at published D50 for all six models" <| fun _ ->
+        for id, organ, d50 in [
+            "thyroid-vogelius-2011", "thyroid", 33.6
+            "neck-weakness-vanleeuwen-2012", "neck-muscles", 27.2
+            "heart-valvular-schellong-2010", "heart", 40.1
+            "heart-morbidity-schellong-2010", "heart", 48.2
+            "kidney-injury-cassady-1995", "kidneys", 27.84 ] do
+            let request = { ModelId = id; Measurements = [ { OarId = organ; Kind = MeanDoseGy; Value = d50 } ]; Histograms = [] }
+            let got = CatalogueCalculations.evaluate request |> requireOk
+            Expect.isLessThan (abs (got.Value - 0.5)) 1e-12 "The logistic D50 should produce 50%."
+        let spared = { ModelId = "parotid-houweling-2010"
+                       Measurements = [ { OarId = "parotids"; Kind = SparedGlandMeanDoseGy; Value = 32.4 } ]
+                       Histograms = [] }
+        let got = CatalogueCalculations.evaluate spared |> requireOk
+        Expect.isLessThan (abs (got.Value - 0.5)) 1e-12 "Spared-gland model should be 50% at D50."
+
+    testCase "Multivariable Beetz endpoint uses all covariates" <| fun _ ->
+        let req = { ModelId = "parotid-beetz-2011"
+                    Measurements = [
+                        { OarId = "parotids"; Kind = MeanDoseGy; Value = 25.0 }
+                        { OarId = ""; Kind = ClinicalVariable "age at treatment"; Value = 60.0 }
+                        { OarId = ""; Kind = ClinicalVariable "baseline xerostomia score"; Value = 1.0 } ]
+                    Histograms = [] }
+        let response = CatalogueCalculations.evaluate req |> requireOk
+        let independent = 1.0 / (1.0 + exp (-(-5.27 + 25.0*0.066 + 60.0*0.050 + 0.916)))
+        Expect.isLessThan (abs (response.Value - independent)) 1e-12 "Beetz coefficients should agree with direct regression."
+
+    testCase "Thyroid volume and heart D10 change their respective multivariable risks" <| fun _ ->
+        let thyroid volume = { ModelId = "thyroid-boomsma-2012"; Measurements = [
+                                  { OarId = "thyroid"; Kind = MeanDoseGy; Value = 25.0 }
+                                  { OarId = "thyroid"; Kind = VolumeCm3; Value = volume } ]; Histograms = [] }
+        let small = CatalogueCalculations.evaluate (thyroid 5.0) |> requireOk
+        let large = CatalogueCalculations.evaluate (thyroid 20.0) |> requireOk
+        Expect.isGreaterThan small.Value large.Value "Boomsma should decrease as gland volume increases."
+        let lung heartD10 = { ModelId = "lung-pneumonitis-huang-2011"; Measurements = [
+                                  { OarId = "lungs"; Kind = MeanDoseGy; Value = 20.0 }
+                                  { OarId = "heart"; Kind = DoseAtVolumePercent 10.0; Value = heartD10 } ]; Histograms = [] }
+        let lower = CatalogueCalculations.evaluate (lung 5.0) |> requireOk
+        let higher = CatalogueCalculations.evaluate (lung 30.0) |> requireOk
+        Expect.isGreaterThan higher.Value lower.Value "Huang should increase with heart D10."
+
+    testCase "LKB full differential DVH equals D50 for uniform irradiation" <| fun _ ->
+        for id, organ, d50 in [
+            "larynx-edema-rancati-2009", "larynx", 47.3
+            "esophagus-esophagitis-belderbos-2005", "esophagus", 47.0
+            "small-bowel-toxicity-eich-2005", "small-bowel", 32.0 ] do
+            let bins = [ { DoseGy = d50; VolumeFraction = 0.3 }
+                         { DoseGy = d50; VolumeFraction = 0.7 } ]
+            let req = { ModelId = id; Measurements = []; Histograms = [ { OarId = organ; Bins = bins } ] }
+            let result = CatalogueCalculations.evaluate req |> requireOk
+            Expect.isLessThan (abs (result.Value - 0.5)) 1e-7 "Uniform DVH at TD50 must give 50%."
+        let invalid = { ModelId = "larynx-edema-rancati-2009"; Measurements = []
+                        Histograms = [ { OarId = "larynx"; Bins = [ { DoseGy = 40.0; VolumeFraction = 0.8 } ] } ] }
+        Expect.isError (CatalogueCalculations.evaluate invalid) "Non-unit DVHs must fail."
+
+    testCase "Logit power is zero at zero dose and fifty percent at D50" <| fun _ ->
+        let request dose = { ModelId = "larynx-dysphagia-rancati-2010"; Measurements = [
+                                 { OarId = "supraglottic-larynx"; Kind = MeanDoseGy; Value = dose } ]; Histograms = [] }
+        let zero = CatalogueCalculations.evaluate (request 0.0) |> requireOk
+        let mid = CatalogueCalculations.evaluate (request 57.5) |> requireOk
+        Expect.equal zero.Value 0.0 "Logit model reaches zero at zero dose."
+        Expect.isLessThan (abs (mid.Value - 0.5)) 1e-12 "Logit model must have exact D50."
+
+    testCase "Dose-related RR and OR are never reported as NTCP probabilities" <| fun _ ->
+        for id, organ, slope, kind in [
+            "lung-cancer-travis-2002", "lungs", 0.141, RelativeRisk
+            "breast-cancer-travis-2003", "breast", 0.149, RelativeRisk
+            "esophagus-cancer-morton-2012", "esophagus", 0.09, OddsRatio
+            "stomach-cancer-vandenbelt-2009", "stomach", 0.84, RelativeRisk ] do
+            let req = { ModelId = id; Measurements = [ { OarId = organ; Kind = MeanDoseGy; Value = 10.0 } ]; Histograms = [] }
+            let output = CatalogueCalculations.evaluate req |> requireOk
+            Expect.equal output.OutputKind kind "Risk measure must remain unchanged."
+            Expect.isLessThan (abs (output.Value - (1.0 + slope*10.0))) 1e-12 "Published linear slope."
+            Expect.isEmpty output.Curve "Relative measures must not appear on probability axes."
+
+    testCase "Missing age, baseline and DVH are rejected instead of silently defaulted" <| fun _ ->
+        let parotid = { ModelId = "parotid-beetz-2011"
+                        Measurements = [ { OarId = "parotids"; Kind = MeanDoseGy; Value = 15.0 } ]
+                        Histograms = [] }
+        Expect.isError (CatalogueCalculations.evaluate parotid) "No synthetic default age."
+        let lung = { ModelId = "lung-pneumonitis-huang-2011"
+                     Measurements = [ { OarId = "lungs"; Kind = MeanDoseGy; Value = 15.0 } ]
+                     Histograms = [] }
+        Expect.isError (CatalogueCalculations.evaluate lung) "Heart D10 is required."
+        Expect.isError (CatalogueCalculations.evaluate { ModelId = "small-bowel-toxicity-eich-2005"; Measurements = []; Histograms = [] }) "No mean-dose fallback."
+        Expect.isError (CatalogueCalculations.evaluate { ModelId = "esophagus-stricture-alevronta-2010"; Measurements = []; Histograms = [] }) "Unverified relative seriality must remain blocked."
+
+
     testCase "Brodin Table 1 inventory includes all 29 entries" <| fun _ ->
         let definitions = Catalogue.definitions ()
         Expect.equal definitions.Length 29 "The paper contains 29 model and evidence entries."
@@ -27,7 +115,7 @@ let server = testList "NTCP calculations" [
     testCase "Risk output type and readiness are explicit for every catalogue entry" <| fun _ ->
         let definitions = Catalogue.definitions ()
         let ready = definitions |> List.filter (fun m -> m.Availability = Implemented)
-        Expect.equal ready.Length 3 "Only the original three models are executable."
+        Expect.equal ready.Length 21 "Eighteen newly specified models plus the original three must be executable."
         let notCurves = definitions |> List.filter (fun m -> m.Availability = NoDoseResponse)
         Expect.equal notCurves.Length 3 "Three entries have no patient-specific dose-response model."
         Expect.isTrue (definitions |> List.exists (fun m -> m.OutputKind = RelativeRisk)) "RR entries are preserved without conversion."
