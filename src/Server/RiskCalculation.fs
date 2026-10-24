@@ -25,8 +25,7 @@ let private endpoint (plan: ValidatedPlan) (model: NtcpModel) =
 let evaluate input : Result<PlanEvaluation, string> =
     result {
         let! validated = Validation.plan input
-        let! estimates = NtcpModels.all
-            |> List.filter (fun model -> Set.contains model.Definition.OarId validated.AvailableOars)
-            |> List.traverseResultM (endpoint validated)
+        let selectedModels = NtcpModels.all |> List.filter (fun model -> Set.contains model.Definition.OarId validated.AvailableOars)
+        let! estimates = selectedModels |> List.traverseResultM (endpoint validated)
         return { PlanLabel = validated.Label; Estimates = estimates }
     }
