@@ -22,6 +22,7 @@ with sync_playwright() as playwright:
     page.screenshot(path="captures/01-heart-valvular-gamma50-safe.png", full_page=True)
 
     page.locator(".catalogue-item").filter(has_text="Laryngeal edema").click()
+    expect(page.locator(".runner-field")).to_contain_text("EQD2 Gy")
     page.locator(".runner-field textarea").fill("47.3:0.3,47.3:0.7")
     page.get_by_role("button", name="Calculate selected model").click()
     expect(page.locator(".runner-value")).to_contain_text("50.000", timeout=30000)
@@ -40,4 +41,4 @@ with sync_playwright() as playwright:
 
     browser.close()
 
-print("PASS: 29 source entries, gamma50 logistic, differential-DVH LKB, RR scale, blocked evidence tested through running SAFE server.")
+print("PASS: 29 entries; gamma50; typed EQD2 DVH LKB; RR (separate scale); blocked models; real SAFE server.")
