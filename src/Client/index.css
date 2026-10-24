@@ -1514,3 +1514,24 @@ svg {
 .model-status-line strong { font-weight: 650; color: #3c6b60; }
 .equation { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
 @media (max-width: 620px) { .catalogue-scroll { max-height: 350px; } }
+
+
+/* Scientific catalogue runner: explicit DVH input and model-specific output. */
+.model-runner { margin-top: 29px; padding: 22px; border: 1px solid #d6e4dd; border-radius: 8px; background: #f7faf8; }
+.runner-title h3 { margin: 7px 0 8px; font-size: 17px; color: #315b59; }
+.runner-title p { font-size: 11px; line-height: 1.7; color: #758e87; }
+.runner-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 13px; margin-top: 20px; }
+.runner-field label { display: block; color: #506d68; font-size: 10px; line-height: 1.5; font-weight: 600; margin-bottom: 7px; }
+.runner-field input, .runner-field textarea { display: block; width: 100%; padding: 10px 12px; font-size: 12px; border: 1px solid #d2e0da; background: white; border-radius: 5px; color: #2b5555; font-family: inherit; }
+.runner-field textarea { min-height: 75px; resize: vertical; }
+.runner-field small { display: block; font-size: 9px; color: #81968e; margin-top: 6px; line-height: 1.6; }
+.runner-button { background: #275960; color: #fff; border-radius: 6px; padding: 12px 18px; margin-top: 17px; font-size: 12px; }
+.runner-button:disabled { opacity: 0.65; }
+.runner-error { font-size: 11px; color: #a25147; margin-top: 15px; line-height: 1.7; }
+.runner-result { margin-top: 20px; border-top: 1px solid #d5e4de; padding-top: 18px; }
+.runner-result > strong { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: #78928c; }
+.runner-result .runner-value { margin: 7px 0; font-size: 30px; font-variant-numeric: tabular-nums; color: #245766; font-weight: 550; }
+.runner-result p { color: #7c918d; font-size: 11px; line-height: 1.7; }
+.model-runner-plot { margin-top: 19px; background: #fff; border: 1px solid #e0e8e4; border-radius: 7px; padding: 8px; }
+.model-runner-plot > svg { width: 100%; height: auto; }
+@media (max-width: 620px) { .model-runner { padding: 14px; } .runner-fields { grid-template-columns: 1fr; } }
