@@ -90,7 +90,13 @@ let update message model =
     | SelectModel id -> { model with SelectedModel = id; Page = Models }, Cmd.none
     | FocusModel id -> { model with FocusedModel = id }, Cmd.none
     | SetZoom zoom -> { model with Zoom = zoom }, Cmd.none
-    | FilterCatalogueOar oar -> { model with CatalogueOar = oar }, Cmd.none
+    | FilterCatalogueOar oar ->
+        let selection =
+            match oar with
+            | Some id -> model.Definitions |> List.tryFind (fun d -> d.OarId = id)
+            | None -> model.Definitions |> List.tryHead
+        let selectedId = selection |> Option.map _.Id |> Option.defaultValue model.SelectedModel
+        { model with CatalogueOar = oar; SelectedModel = selectedId }, Cmd.none
     | ModelsLoaded (Ok definitions) -> { model with Definitions = definitions }, Cmd.none
     | ModelsLoaded (Error error) -> { model with Error = Some error; Busy = false }, Cmd.none
     | Calculated (id, _) when id <> model.RequestId -> model, Cmd.none
