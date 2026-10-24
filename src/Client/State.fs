@@ -73,7 +73,7 @@ let catalogueInputKey (input: ModelInput) =
     input.OarId + "|" + sprintf "%A" input.Kind
 
 /// Parses a normalised differential DVH from a comma-separated series of doseGy:volumeFraction bins.
-let private parseDifferentialDvh label (value: string) =
+let private parseDifferentialDvh label basis (value: string) =
     result {
         do! (not (String.IsNullOrWhiteSpace value)) |> Result.requireTrue ("Enter a full differential DVH for " + label + ".")
         let entries = value.Split([| ','; '\n'; ';' |], StringSplitOptions.RemoveEmptyEntries) |> Array.toList
@@ -87,7 +87,7 @@ let private parseDifferentialDvh label (value: string) =
                         let! fraction = number "DVH fractional volume" parts.[1]
                         return { DoseGy = dose; VolumeFraction = fraction }
                     })
-        return { OarId = label; Bins = bins }
+        return { OarId = label; DoseBasis = basis; Bins = bins }
     }
 
 /// Parses a model's exact required scalar inputs and full DVH inputs for the server.
@@ -96,7 +96,7 @@ let catalogueInput (definition: ModelDefinition) (values: Map<string, string>) =
         let read input = Map.tryFind (catalogueInputKey input) values |> Option.defaultValue ""
         let! measurements =
             definition.Inputs
-            |> List.filter (fun input -> input.Kind <> DifferentialDvh)
+            |> List.filter (fun input -> (match input.Kind with | DifferentialDvh _ -> false | _ -> true))
             |> List.traverseResultM (fun input ->
                 result {
                     let! value = number input.Description (read input)
@@ -104,8 +104,11 @@ let catalogueInput (definition: ModelDefinition) (values: Map<string, string>) =
                 })
         let! histograms =
             definition.Inputs
-            |> List.filter (fun input -> input.Kind = DifferentialDvh)
-            |> List.traverseResultM (fun input -> parseDifferentialDvh input.OarId (read input))
+            |> List.filter (fun input -> (match input.Kind with | DifferentialDvh _ -> true | _ -> false))
+            |> List.traverseResultM (fun input ->
+                match input.Kind with
+                | DifferentialDvh basis -> parseDifferentialDvh input.OarId basis (read input)
+                | _ -> Error "Expected a DVH input.")
         return { ModelId = definition.Id; Measurements = measurements; Histograms = histograms }
     }
 
