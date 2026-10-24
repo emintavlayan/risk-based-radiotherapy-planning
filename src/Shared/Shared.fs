@@ -61,6 +61,28 @@ type ModelDefinition = {
 /// Represents one sampled point on a dose-response curve.
 type CurvePoint = { DoseGy: float; Probability: float }
 
+/// Represents a scalar measurement with a canonical OAR identifier and typed interpretation.
+type MetricMeasurement = { OarId: string; Kind: ModelInputKind; Value: float }
+
+/// Represents a differential DVH bin with fractional organ volume (not percent).
+type DvhBin = { DoseGy: float; VolumeFraction: float }
+
+/// Represents an organ differential DVH with bins summing to unity.
+type OrganDvh = { OarId: string; Bins: DvhBin list }
+
+/// Represents all explicit measurements required to evaluate one catalogue entry.
+type CatalogueEvaluationInput = { ModelId: string; Measurements: MetricMeasurement list; Histograms: OrganDvh list }
+
+/// Represents one numerical result with its original risk semantics and an optional dose-response.
+type CatalogueEvaluation = {
+    ModelId: string
+    OutputKind: RiskOutputKind
+    Value: float
+    DosePredictorGy: float option
+    DosePredictorLabel: string option
+    Curve: CurvePoint list
+}
+
 /// Represents a plan marker and the curve evaluated using the same equation.
 type EndpointEstimate = {
     ModelId: string
@@ -77,6 +99,7 @@ type PlanEvaluation = { PlanLabel: string; Estimates: EndpointEstimate list }
 type IRiskApi = {
     getModels: unit -> Async<ModelDefinition list>
     evaluatePlan: PlanInput -> Async<Result<PlanEvaluation, string>>
+    evaluateCatalogueModel: CatalogueEvaluationInput -> Async<Result<CatalogueEvaluation, string>>
 }
 
 module Example =
