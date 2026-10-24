@@ -22,7 +22,7 @@ type DoseResponse =
 /// Represents validated inputs to the pure calculation workflow.
 type ValidatedPlan = {
     Label: string; Age: AgeAtPlanCreation; Sex: Sex; Doses: Map<Organ, DoseGy>
-    CardiacRiskFactors: bool; Chemotherapy: bool
+    CardiacRiskFactors: bool; Chemotherapy: bool; AvailableOars: Set<string>
 }
 
 module DoseGy =
@@ -47,6 +47,8 @@ module Validation =
             do! (not (String.IsNullOrWhiteSpace input.PlanLabel)) |> Result.requireTrue "Enter a plan label."
             do! (input.PlanLabel.Length <= 80) |> Result.requireTrue "Plan label must be at most 80 characters."
             let! age = AgeAtPlanCreation.create input.AgeAtPlanCreation
+            let supportedOars = Set.ofList [ "heart"; "lungs"; "liver" ]
+            do! (input.AvailableOarIds |> List.forall (fun oar -> Set.contains oar supportedOars)) |> Result.requireTrue "Unknown OAR in available structures."
             let! heart = DoseGy.create input.MeanHeartDoseGy |> Result.mapError (fun e -> "Heart: " + e)
             let! lung = DoseGy.create input.MeanLungDoseGy |> Result.mapError (fun e -> "Lungs: " + e)
             let! liver = DoseGy.create input.MeanLiverDoseGy |> Result.mapError (fun e -> "Liver: " + e)
@@ -54,6 +56,7 @@ module Validation =
                 Label = input.PlanLabel.Trim(); Age = age; Sex = input.Sex
                 Doses = Map [Heart, heart; Lungs, lung; Liver, liver]
                 CardiacRiskFactors = input.CardiacRiskFactors; Chemotherapy = input.Chemotherapy
+                AvailableOars = Set.ofList input.AvailableOarIds
             }
         }
 

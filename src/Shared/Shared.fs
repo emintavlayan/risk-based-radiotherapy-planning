@@ -11,6 +11,7 @@ type PlanInput = {
     MeanHeartDoseGy: float
     MeanLungDoseGy: float
     MeanLiverDoseGy: float
+    AvailableOarIds: string list
     CardiacRiskFactors: bool
     Chemotherapy: bool
 }
@@ -18,10 +19,27 @@ type PlanInput = {
 /// Represents a named published coefficient with explicit units.
 type ModelParameter = { Symbol: string; Value: float; Unit: string; Description: string }
 
+/// Represents the interpretation of a model's numerical output.
+type RiskOutputKind = AbsoluteProbability | RelativeRisk | OddsRatio | BaselineAdjustedIncidence | NoRiskEstimate
+
+/// Represents whether the catalogue entry is ready for server evaluation.
+type ModelAvailability = Implemented | RequiresImplementation | MissingParameters | NoDoseResponse
+
+/// Represents a typed requirement for a future ESAPI/DVH or clinical-data input.
+type ModelInputKind = MeanDoseGy | DoseAtVolumePercent of float | DifferentialDvh | VolumeCm3 | ClinicalVariable of string | BaselineIncidence
+
+/// Represents one required metric with a canonical OAR identifier.
+type ModelInput = { OarId: string; Kind: ModelInputKind; Description: string }
+
 /// Represents a source-linked model definition displayed by the catalogue.
 type ModelDefinition = {
     Id: string
     Organ: string
+    OarId: string
+    Region: string
+    OutputKind: RiskOutputKind
+    Availability: ModelAvailability
+    Inputs: ModelInput list
     Endpoint: string
     Name: string
     Family: string
@@ -66,5 +84,6 @@ module Example =
     let plan = {
         PlanLabel = "Example plan"; AgeAtPlanCreation = 42.0; Sex = Female
         MeanHeartDoseGy = 18.0; MeanLungDoseGy = 14.0; MeanLiverDoseGy = 26.0
+        AvailableOarIds = [ "heart"; "lungs"; "liver" ]
         CardiacRiskFactors = false; Chemotherapy = true
     }

@@ -6,6 +6,15 @@ open Shared
 
 /// Represents client state checks for request ordering and screen navigation.
 let client = testList "Risk calculator state" [
+    testCase "Available OAR selectors change the server request" <| fun _ ->
+        let original = exampleForm ()
+        let changed = toggleAvailableOar "heart" original
+        Expect.isFalse (List.contains "heart" changed.AvailableOars) "Heart must be excluded."
+        match input changed with
+        | Ok request -> Expect.equal request.AvailableOarIds changed.AvailableOars "Active organs must be sent to the server."
+        | Error err -> failtest err
+
+
     testCase "A stale response cannot replace the current plan" <| fun _ ->
         let model, _ = init ()
         let current, _ = update (SetForm { model.Form with Heart = "20" }) model

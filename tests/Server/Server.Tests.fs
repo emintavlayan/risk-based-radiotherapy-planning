@@ -18,6 +18,38 @@ let private assertProbability id expected tolerance input =
 
 /// Represents numerical and validation checks for the published calculation workflow.
 let server = testList "NTCP calculations" [
+    testCase "Brodin Table 1 inventory includes all 29 entries" <| fun _ ->
+        let definitions = Catalogue.definitions ()
+        Expect.equal definitions.Length 29 "The paper contains 29 model and evidence entries."
+        Expect.equal (definitions |> List.map _.Id |> Set.ofList |> Set.count) 29 "Model identifiers must be unique."
+        Expect.equal (definitions |> List.map _.OarId |> Set.ofList |> Set.count) 17 "Model catalogue must cover 17 named OAR categories."
+
+    testCase "Risk output type and readiness are explicit for every catalogue entry" <| fun _ ->
+        let definitions = Catalogue.definitions ()
+        let ready = definitions |> List.filter (fun m -> m.Availability = Implemented)
+        Expect.equal ready.Length 3 "Only the original three models are executable."
+        let notCurves = definitions |> List.filter (fun m -> m.Availability = NoDoseResponse)
+        Expect.equal notCurves.Length 3 "Three entries have no patient-specific dose-response model."
+        Expect.isTrue (definitions |> List.exists (fun m -> m.OutputKind = RelativeRisk)) "RR entries are preserved without conversion."
+        Expect.isTrue (definitions |> List.exists (fun m -> m.OutputKind = OddsRatio)) "OR entry is preserved without conversion."
+
+    testCase "Canonical OAR filtering returns multiple endpoints for the same structure" <| fun _ ->
+        let heart = Catalogue.forOrgans [ "heart" ]
+        Expect.equal heart.Length 3 "The catalogue records three heart endpoints."
+        Expect.isTrue (heart |> List.forall (fun m -> m.OarId = "heart")) "Filter must use the canonical OAR ID."
+        let thyroid = Catalogue.forOrgans [ "thyroid" ]
+        Expect.equal thyroid.Length 3 "The catalogue records three thyroid models."
+
+    testCase "Only available OARs are evaluated, and excluded models cannot appear in curves" <| fun _ ->
+        let input = { Example.plan with AvailableOarIds = [ "lungs" ] }
+        let evaluation = RiskCalculation.evaluate input |> requireOk
+        Expect.equal (evaluation.Estimates |> List.map _.ModelId) [ "lung-quantec-marks" ] "Only lung should be evaluated."
+        let none = RiskCalculation.evaluate { Example.plan with AvailableOarIds = [] } |> requireOk
+        Expect.isEmpty none.Estimates "No selected OAR means no calculated curve."
+        let invalid = RiskCalculation.evaluate { Example.plan with AvailableOarIds = [ "unrecognized" ] }
+        Expect.isError invalid "Unknown OARs must not be silently accepted."
+
+
     testCase "Linear cardiac model agrees with the published slope" <| fun _ ->
         assertProbability "heart-hancock-brodin" 0.0189 1e-12 Example.plan
 

@@ -79,6 +79,18 @@ let private inputPane model dispatch =
             doseField "heart-dose" "Heart" "Cardiac mortality" "#bc5b47" form.Heart (fun value -> dispatch (SetForm { form with Heart = value }))
             doseField "lung-dose" "Lungs" "Radiation pneumonitis" "#287e99" form.Lung (fun value -> dispatch (SetForm { form with Lung = value }))
             doseField "liver-dose" "Liver" "Radiation-induced liver disease" "#7c62a6" form.Liver (fun value -> dispatch (SetForm { form with Liver = value }))
+            Html.div [ prop.className "subsection-title"; prop.text "AVAILABLE OARS FOR RISK PLOT" ]
+            Html.div [ prop.className "available-oars"; prop.children [
+                for id, label in [ "heart", "Heart"; "lungs", "Lungs"; "liver", "Liver" ] do
+                    let enabled = List.contains id form.AvailableOars
+                    Html.button [
+                        prop.className ("available-oar " + if enabled then "active" else "")
+                        prop.ariaPressed enabled
+                        prop.onClick (fun _ -> dispatch (SetForm (toggleAvailableOar id form)))
+                        prop.text ((if enabled then "✓ " else "○ ") + label)
+                    ]
+            ] ]
+            Html.p [ prop.className "factor-note"; prop.text "Only models with implemented equations and available OAR inputs are evaluated. Later the ESAPI import will supply the available structures and metrics." ]
         ] ]
         Html.section [ prop.className "panel input-panel clinical-panel"; prop.children [
             sectionHeading "02" "Clinical factors" "Patient & treatment context"
@@ -111,7 +123,7 @@ let private resultsPane model dispatch =
             ] ]
             Html.div [ prop.className "plot-toolbar"; prop.children [
                 Html.div [ prop.className "plot-legend"; prop.children [
-                    for definition in model.Definitions do
+                    for definition in plottedDefinitions model do
                         Html.button [ prop.className "legend-item"; prop.onMouseEnter (fun _ -> dispatch (FocusModel (Some definition.Id))); prop.onMouseLeave (fun _ -> dispatch (FocusModel None)); prop.onFocus (fun _ -> dispatch (FocusModel (Some definition.Id))); prop.onBlur (fun _ -> dispatch (FocusModel None)); prop.onClick (fun _ -> dispatch (SelectModel definition.Id)); prop.children [ Html.span [ prop.className "legend-line"; prop.style [ style.backgroundColor definition.Color ] ]; Html.text definition.Organ ] ]
                 ] ]
                 Html.div [ prop.className "segmented plot-range"; prop.role "group"; prop.ariaLabel "Plot range"; prop.children [
@@ -122,6 +134,7 @@ let private resultsPane model dispatch =
             match model.Error with
             | Some error -> Html.div [ prop.className "error-message"; prop.role "alert"; prop.text error ]
             | None when model.Evaluation.IsNone -> Html.div [ prop.className "loading-chart"; prop.text "Loading the example risk profile…" ]
+            | None when List.isEmpty estimates -> Html.div [ prop.className "loading-chart"; prop.text "No implemented NTCP models match the available OARs." ]
             | None -> Plot.view model dispatch
             Html.div [ prop.className "chart-caption"; prop.children [
                 Html.div [ Html.span [ prop.className "marker-key" ]; Html.span "Filled points show the current plan" ]
@@ -140,7 +153,7 @@ let private resultsPane model dispatch =
             Html.div [ Html.strong "Read each endpoint in its own clinical context."; Html.p "Endpoints have different severity and follow-up periods. Estimates are not additive, and curve height alone does not establish a planning priority. “pp” means percentage points." ]
         ] ]
         Html.div [ prop.className "science-strip"; prop.children [
-            Html.div [ Html.span "3"; Html.small "Published models" ]
+            Html.div [ Html.span (string (model.Definitions |> List.filter (fun m -> m.Availability = Implemented) |> List.length)); Html.small "Executable models" ]
             Html.div [ Html.span "Gy"; Html.small "Explicit dose units" ]
             Html.div [ Html.span "↗"; Html.small "Source-linked equations" ]
         ] ]
@@ -153,7 +166,7 @@ let view model dispatch =
             Html.a [ prop.className "brand"; prop.href "#"; prop.onClick (fun event -> event.preventDefault (); dispatch (Navigate Calculator)); prop.children [ brandMark; Html.div [ Html.strong "Risk-Based"; Html.span "Radiotherapy Planning" ] ] ]
             Html.nav [ prop.className "main-nav"; prop.ariaLabel "Main navigation"; prop.children [
                 Html.button [ prop.className (if model.Page = Calculator then "nav-item active" else "nav-item"); prop.onClick (fun _ -> dispatch (Navigate Calculator)); prop.text "Calculator" ]
-                Html.button [ prop.className (if model.Page = Models then "nav-item active" else "nav-item"); prop.onClick (fun _ -> dispatch (Navigate Models)); prop.children [ Html.text "NTCP models"; Html.span [ prop.className "nav-count"; prop.text "3" ] ] ]
+                Html.button [ prop.className (if model.Page = Models then "nav-item active" else "nav-item"); prop.onClick (fun _ -> dispatch (Navigate Models)); prop.children [ Html.text "NTCP models"; Html.span [ prop.className "nav-count"; prop.text (string model.Definitions.Length) ] ] ]
             ] ]
             Html.span [ prop.className "prototype-label"; prop.children [ Html.span [ prop.className "status-dot" ]; Html.text "Research prototype" ] ]
         ] ]
@@ -162,7 +175,7 @@ let view model dispatch =
                 Html.div [
                     Html.div [ prop.className "breadcrumb"; prop.text ("RISK-BASED RADIOTHERAPY PLANNING / " + if model.Page = Calculator then "CALCULATOR" else "MODEL CATALOGUE") ]
                     Html.h1 (if model.Page = Calculator then "Understand the risk behind the dose." else "The evidence behind every curve.")
-                    Html.p (if model.Page = Calculator then "Explore three published NTCP models using an example plan." else "Inspect the equation, its assumptions and its published source.")
+                    Html.p (if model.Page = Calculator then "Explore published models using an example plan and only its available OARs." else "Inspect the equation, its assumptions and its published source.")
                 ]
                 if model.Page = Calculator then Html.button [ prop.className "reset-button"; prop.onClick (fun _ -> dispatch ResetExample); prop.text "↺  Reset example" ]
                 else Html.button [ prop.className "reset-button"; prop.onClick (fun _ -> dispatch (Navigate Calculator)); prop.text "←  Back to calculator" ]

@@ -21,10 +21,11 @@ let private endpoint (plan: ValidatedPlan) (model: NtcpModel) =
         }
     }
 
-/// Validates a plan and evaluates all three models on the server.
+/// Validates a plan and evaluates only implemented models with an available OAR.
 let evaluate input : Result<PlanEvaluation, string> =
     result {
         let! validated = Validation.plan input
-        let! estimates = NtcpModels.all |> List.traverseResultM (endpoint validated)
+        let selectedModels = NtcpModels.all |> List.filter (fun model -> Set.contains model.Definition.OarId validated.AvailableOars)
+        let! estimates = selectedModels |> List.traverseResultM (endpoint validated)
         return { PlanLabel = validated.Label; Estimates = estimates }
     }
