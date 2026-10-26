@@ -8,6 +8,12 @@ The initial research focus is lymphoma. The intended workflow combines plan dosi
 
 The research prototype includes a manual-entry calculator, **21 executable dose-response/relative-effect models** (three in the main calculator and 18 additional in the model runner), and a **29-entry model/evidence catalogue** transcribed from Brodin et al. Table 1, spanning **17 OAR categories**. The catalogue distinguishes implementation status, risk measures (NTCP/RR/OR/incidence), and required patient or DVH metrics. Synthetic inputs load automatically, and calculations run on the SAFE server.
 
+## Display modes
+
+The main calculator now opens in **Clinical focus**, a compact view of dose inputs, endpoint estimates and one dynamically fitted scientific chart. **Research detail** preserves the original detailed view, including patient and clinical factors; switching modes retains all plan values and server evaluations. The plot's adaptive detail expands or contracts around the current evaluated markers instead of clipping them at fixed 30 Gy/30% axes. Full range stays fixed for reproducible visual comparison.
+
+See [Clinical focus UI decisions](docs/CLINICAL-FOCUS.md). All clinical numerical calculations still run on the SAFE server; the two layouts only change the presentation.
+
 ## Implemented prototype
 
 The calculator includes:
