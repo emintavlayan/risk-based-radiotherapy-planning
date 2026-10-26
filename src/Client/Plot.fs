@@ -64,7 +64,7 @@ let view model dispatch =
                                                         svg.y2 (y maxRisk estimate.Probability)
                                                         svg.stroke definition.Color
                                                         svg.strokeWidth 5.0
-                                                        svg.strokeLinecap "round"
+                                                        svg.custom ("stroke-linecap", "round")
                                                     ]
                                                     Svg.circle [
                                                         svg.cx (x maxDose (estimate.DoseGy - 1.0))
