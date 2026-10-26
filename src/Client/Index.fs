@@ -159,6 +159,115 @@ let private resultsPane model dispatch =
         ] ]
     ] ]
 
+
+/// Shows the minimum required dosimetric inputs without presenting unused clinical variables.
+let private focusedInputPane model dispatch =
+    let form = model.Form
+    Html.aside [ prop.className "focus-input panel"; prop.children [
+        Html.div [ prop.className "focus-panel-heading"; prop.children [
+            Html.span [ prop.className "eyebrow"; prop.text "INPUTS" ]
+            Html.h2 "Organ doses"
+            Html.p "Adjust mean doses to update the risk profile."
+        ] ]
+        Html.div [ prop.className "focus-dose-list"; prop.children [
+            doseField "heart-dose" "Heart" "Cardiac mortality" "#bc5b47" form.Heart (fun value -> dispatch (SetForm { form with Heart = value }))
+            doseField "lung-dose" "Lungs" "Radiation pneumonitis" "#287e99" form.Lung (fun value -> dispatch (SetForm { form with Lung = value }))
+            doseField "liver-dose" "Liver" "Radiation-induced liver disease" "#7c62a6" form.Liver (fun value -> dispatch (SetForm { form with Liver = value }))
+        ] ]
+        Html.div [ prop.className "focus-oar-select"; prop.children [
+            Html.strong "Included organs"
+            Html.div [ prop.className "available-oars"; prop.children [
+                for id, label in [ "heart", "Heart"; "lungs", "Lungs"; "liver", "Liver" ] do
+                    let included = List.contains id form.AvailableOars
+                    Html.button [
+                        prop.className ("available-oar " + if included then "active" else "")
+                        prop.ariaPressed included
+                        prop.onClick (fun _ -> dispatch (SetForm (toggleAvailableOar id form)))
+                        prop.text ((if included then "✓ " else "+ ") + label)
+                    ]
+            ] ]
+        ] ]
+        Html.button [
+            prop.className "focus-advanced-link"
+            prop.onClick (fun _ -> dispatch (SetDisplayMode ResearchDetail))
+            prop.text "Open complete patient and clinical inputs ↗"
+        ]
+    ] ]
+
+/// Shows each current endpoint estimate as one compact data row with its own clinical meaning.
+let private focusedEstimate (definition: ModelDefinition) (estimate: EndpointEstimate) dispatch =
+    Html.div [ prop.className "focus-estimate"; prop.children [
+        Html.div [ prop.className "focus-estimate-name"; prop.children [
+            Html.span [ prop.className "organ-dot"; prop.style [ style.backgroundColor definition.Color ] ]
+            Html.div [ Html.strong definition.Organ; Html.span definition.Endpoint ]
+        ] ]
+        Html.div [ prop.className "focus-estimate-measure"; prop.children [
+            Html.strong (riskText estimate.Probability + "%")
+            Html.span (sprintf "%.1f Gy" estimate.DoseGy)
+        ] ]
+        Html.button [
+            prop.className "focus-detail-link"
+            prop.ariaLabel ("View model details for " + definition.Endpoint)
+            prop.onClick (fun _ -> dispatch (SelectModel definition.Id))
+            prop.text "Details ↗"
+        ]
+    ] ]
+
+/// Prioritizes risk values and one adaptive scientific chart while retaining original model provenance.
+let private focusedResults model dispatch =
+    let estimates = model.Evaluation |> Option.map _.Estimates |> Option.defaultValue []
+    Html.div [ prop.className "focus-results"; prop.children [
+        Html.section [ prop.className "panel focus-summary"; prop.children [
+            Html.div [ prop.className "focus-section-title"; prop.children [
+                Html.div [ Html.span [ prop.className "eyebrow"; prop.text "PLAN RISK PROFILE" ]; Html.h2 "Estimated endpoints" ]
+                Html.span [ prop.className ("calculation-status " + if model.Busy then "busy" else ""); prop.children [
+                    Html.span [ prop.className "status-dot" ]
+                    Html.text (if model.Busy then "Updating" else "Calculated")
+                ] ]
+            ] ]
+            match model.Error with
+            | Some error -> Html.div [ prop.role "alert"; prop.className "error-message"; prop.text error ]
+            | None when model.Evaluation.IsNone -> Html.p "Evaluating the example plan…"
+            | None when List.isEmpty estimates -> Html.p "No executable models match the selected organs."
+            | None ->
+                Html.div [ prop.className "focus-estimates"; prop.ariaLive.polite; prop.children [
+                    for definition in plottedDefinitions model do
+                        match estimates |> List.tryFind (fun value -> value.ModelId = definition.Id) with
+                        | Some estimate -> focusedEstimate definition estimate dispatch
+                        | None -> ()
+                ] ]
+            Html.p [ prop.className "focus-integrity-note"; prop.text "Separate clinical endpoints · different severity and time horizons · not additive." ]
+        ] ]
+        Html.section [ prop.className "panel focus-chart"; prop.children [
+            Html.div [ prop.className "focus-section-title"; prop.children [
+                Html.div [ Html.span [ prop.className "eyebrow"; prop.text "DOSE–RESPONSE" ]; Html.h2 "Risk versus mean dose" ]
+                Html.div [ prop.className "segmented plot-range"; prop.role "group"; prop.ariaLabel "Plot range"; prop.children [
+                    Html.button [ prop.className (if model.Zoom then "active" else ""); prop.onClick (fun _ -> dispatch (SetZoom true)); prop.text "Adaptive detail" ]
+                    Html.button [ prop.className (if not model.Zoom then "active" else ""); prop.onClick (fun _ -> dispatch (SetZoom false)); prop.text "Full range" ]
+                ] ]
+            ] ]
+            match model.Error, model.Evaluation with
+            | Some _, _ -> Html.none
+            | None, Some evaluation when not (List.isEmpty evaluation.Estimates) -> Plot.view model dispatch
+            | _ -> Html.none
+            Html.div [ prop.className "focus-legend"; prop.children [
+                for definition in plottedDefinitions model do
+                    Html.button [
+                        prop.onMouseEnter (fun _ -> dispatch (FocusModel (Some definition.Id)))
+                        prop.onMouseLeave (fun _ -> dispatch (FocusModel None))
+                        prop.onFocus (fun _ -> dispatch (FocusModel (Some definition.Id)))
+                        prop.onBlur (fun _ -> dispatch (FocusModel None))
+                        prop.onClick (fun _ -> dispatch (SelectModel definition.Id))
+                        prop.children [
+                            Html.span [ prop.className "legend-line"; prop.style [ style.backgroundColor definition.Color ] ]
+                            Html.text definition.Endpoint
+                        ]
+                    ]
+            ] ]
+            Html.p [ prop.className "focus-integrity-note"; prop.text "Published equations · physical Gy · conventionally fractionated RT. Axes use the same units for all visible endpoints." ]
+        ] ]
+    ] ]
+
 /// Renders the calculator and model catalogue in the same persistent application shell.
 let view model dispatch =
     Html.div [ prop.className "app-shell"; prop.children [
@@ -173,15 +282,28 @@ let view model dispatch =
         Html.main [ prop.className "main-content"; prop.children [
             Html.div [ prop.className "page-heading"; prop.children [
                 Html.div [
-                    Html.div [ prop.className "breadcrumb"; prop.text ("RISK-BASED RADIOTHERAPY PLANNING / " + if model.Page = Calculator then "CALCULATOR" else "MODEL CATALOGUE") ]
-                    Html.h1 (if model.Page = Calculator then "Understand the risk behind the dose." else "The evidence behind every curve.")
-                    Html.p (if model.Page = Calculator then "Explore published models using an example plan and only its available OARs." else "Inspect the equation, its assumptions and its published source.")
+                    if model.Page = Models || model.DisplayMode = ResearchDetail then Html.div [ prop.className "breadcrumb"; prop.text ("RISK-BASED RADIOTHERAPY PLANNING / " + if model.Page = Calculator then "CALCULATOR" else "MODEL CATALOGUE") ]
+                    Html.h1 (if model.Page = Calculator then (if model.DisplayMode = ClinicalFocus then "Treatment risk profile" else "Understand the risk behind the dose.") else "The evidence behind every curve.")
+                    Html.p (if model.Page = Calculator then (if model.DisplayMode = ClinicalFocus then "Three endpoints · one example plan · published mathematical models." else "Explore published models using an example plan and only its available OARs.") else "Inspect the equation, its assumptions and its published source.")
                 ]
                 if model.Page = Calculator then Html.button [ prop.className "reset-button"; prop.onClick (fun _ -> dispatch ResetExample); prop.text "↺  Reset example" ]
                 else Html.button [ prop.className "reset-button"; prop.onClick (fun _ -> dispatch (Navigate Calculator)); prop.text "←  Back to calculator" ]
             ] ]
-            Html.div [ prop.className "example-banner"; prop.children [ Html.span [ prop.className "example-pill"; prop.text "EXAMPLE DATA" ]; Html.span "Synthetic patient & plan inputs. Published model equations. Research demonstration." ] ]
-            if model.Page = Calculator then Html.div [ prop.className "calculator-layout"; prop.children [ inputPane model dispatch; resultsPane model dispatch ] ]
+            Html.div [ prop.className ("example-banner " + if model.Page = Calculator && model.DisplayMode = ClinicalFocus then "focus-banner" else ""); prop.children [
+                Html.span [ prop.className "example-pill"; prop.text "EXAMPLE DATA" ]
+                Html.span (if model.Page = Calculator && model.DisplayMode = ClinicalFocus then "Synthetic plan · research prototype, not for clinical decisions" else "Synthetic patient & plan inputs. Published model equations. Research demonstration.")
+            ] ]
+            if model.Page = Calculator then
+                Html.div [ prop.className "display-mode-switch"; prop.role "group"; prop.ariaLabel "Calculator presentation"; prop.children [
+                    Html.span "VIEW"
+                    Html.button [ prop.className (if model.DisplayMode = ClinicalFocus then "selected" else ""); prop.ariaPressed (model.DisplayMode = ClinicalFocus); prop.onClick (fun _ -> dispatch (SetDisplayMode ClinicalFocus)); prop.text "Clinical focus" ]
+                    Html.button [ prop.className (if model.DisplayMode = ResearchDetail then "selected" else ""); prop.ariaPressed (model.DisplayMode = ResearchDetail); prop.onClick (fun _ -> dispatch (SetDisplayMode ResearchDetail)); prop.text "Research detail" ]
+                ] ]
+            if model.Page = Calculator then
+                if model.DisplayMode = ClinicalFocus then
+                    Html.div [ prop.className "focus-layout"; prop.children [ focusedInputPane model dispatch; focusedResults model dispatch ] ]
+                else
+                    Html.div [ prop.className "calculator-layout"; prop.children [ inputPane model dispatch; resultsPane model dispatch ] ]
             else ModelCatalogue.view model dispatch
         ] ]
         Html.footer [ prop.className "app-footer"; prop.children [ Html.span "Risk-Based Radiotherapy Planning"; Html.span "F# · SAFE Stack"; Html.span "Research prototype · not validated for clinical decisions" ] ]
