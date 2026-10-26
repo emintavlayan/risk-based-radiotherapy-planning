@@ -161,7 +161,7 @@ let private resultsPane model dispatch =
 
 
 /// Presents the current model's exact DVH metric rather than a generic organ-dose description.
-let private leanMetricField id label endpoint color value change =
+let private leanMetricField (id: string) (label: string) (endpoint: string) (color: string) (value: string) change =
     Html.div [ prop.className "dose-row lean-metric-row"; prop.children [
         Html.div [ prop.className "dose-heading"; prop.children [
             Html.span [ prop.className "organ-dot"; prop.style [ style.backgroundColor color ] ]
