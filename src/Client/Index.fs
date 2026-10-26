@@ -159,32 +159,157 @@ let private resultsPane model dispatch =
         ] ]
     ] ]
 
+
+/// Presents the current model's exact DVH metric rather than a generic organ-dose description.
+let private leanMetricField (id: string) (label: string) (endpoint: string) (color: string) (value: string) change =
+    Html.div [ prop.className "dose-row lean-metric-row"; prop.children [
+        Html.div [ prop.className "dose-heading"; prop.children [
+            Html.span [ prop.className "organ-dot"; prop.style [ style.backgroundColor color ] ]
+            Html.label [ prop.htmlFor id; prop.text label ]
+        ] ]
+        Html.div [ prop.className "number-field dose-number"; prop.children [
+            Html.input [ prop.id id; prop.type' "number"; prop.min 0; prop.max 50; prop.step 0.1; prop.value value; prop.onChange (fun (text: string) -> change text) ]
+            Html.span "Gy"
+        ] ]
+        Html.small [ prop.className "dose-endpoint"; prop.text endpoint ]
+    ] ]
+
+/// Displays the three currently implemented mean-dose metrics with OAR inclusion controls.
+let private focusedInputPane model dispatch =
+    let form = model.Form
+    Html.aside [ prop.className "focus-input panel"; prop.children [
+        Html.span [ prop.className "eyebrow"; prop.text "DVH INPUTS" ]
+        Html.div [ prop.className "focus-dose-list"; prop.children [
+            leanMetricField "heart-dose" "Heart · Dmean" "Cardiac mortality" "#bc5b47" form.Heart (fun value -> dispatch (SetForm { form with Heart = value }))
+            leanMetricField "lung-dose" "Lungs · Dmean" "Radiation pneumonitis" "#287e99" form.Lung (fun value -> dispatch (SetForm { form with Lung = value }))
+            leanMetricField "liver-dose" "Liver · Dmean" "Radiation-induced liver disease" "#7c62a6" form.Liver (fun value -> dispatch (SetForm { form with Liver = value }))
+        ] ]
+        Html.div [ prop.className "focus-oar-select"; prop.children [
+            Html.div [ prop.className "available-oars"; prop.role "group"; prop.ariaLabel "Included OARs"; prop.children [
+                for id, label in [ "heart", "Heart"; "lungs", "Lungs"; "liver", "Liver" ] do
+                    let included = List.contains id form.AvailableOars
+                    Html.button [
+                        prop.className ("available-oar " + if included then "active" else "")
+                        prop.ariaPressed included
+                        prop.ariaLabel ((if included then "Exclude " else "Include ") + label)
+                        prop.onClick (fun _ -> dispatch (SetForm (toggleAvailableOar id form)))
+                        prop.text ((if included then "✓ " else "+ ") + label)
+                    ]
+            ] ]
+        ] ]
+    ] ]
+
+/// Formats the model's exact predicted absolute NTCP reduction for one Gy less.
+let private marginalRiskText (estimate: EndpointEstimate) =
+    if estimate.DoseGy <= 0.0 then "0.00 pp"
+    else riskText estimate.ReductionForOneGy + " pp"
+
+/// Displays a model endpoint row with matched dose, NTCP and the finite one-Gy reduction.
+let private focusedEstimate (definition: ModelDefinition) (estimate: EndpointEstimate) dispatch =
+    Html.div [ prop.className "focus-estimate"; prop.children [
+        Html.div [ prop.className "focus-estimate-name"; prop.children [
+            Html.span [ prop.className "organ-dot"; prop.style [ style.backgroundColor definition.Color ] ]
+            Html.div [
+                Html.strong definition.Organ
+                Html.span definition.Endpoint
+            ]
+        ] ]
+        Html.span [ prop.className "focus-estimate-dose"; prop.text (sprintf "%.1f Gy" estimate.DoseGy) ]
+        Html.strong [ prop.className "focus-estimate-risk"; prop.text (riskText estimate.Probability + "%") ]
+        Html.strong [ prop.className "focus-estimate-delta"; prop.text (marginalRiskText estimate) ]
+        Html.button [
+            prop.className "focus-detail-link"
+            prop.ariaLabel ("View published model for " + definition.Endpoint)
+            prop.onClick (fun _ -> dispatch (SelectModel definition.Id))
+            prop.text "Model ↗"
+        ]
+    ] ]
+
+/// Places the dose-response chart first, followed by endpoint-specific sensitivity values.
+let private focusedResults model dispatch =
+    let estimates = model.Evaluation |> Option.map _.Estimates |> Option.defaultValue []
+    Html.div [ prop.className "focus-results"; prop.children [
+        Html.section [ prop.className "panel focus-chart"; prop.children [
+            Html.div [ prop.className "focus-section-title"; prop.children [
+                Html.h2 "Dose–response"
+                Html.div [ prop.className "segmented plot-range"; prop.role "group"; prop.ariaLabel "Plot range"; prop.children [
+                    Html.button [ prop.className (if model.Zoom then "active" else ""); prop.onClick (fun _ -> dispatch (SetZoom true)); prop.text "Adaptive" ]
+                    Html.button [ prop.className (if not model.Zoom then "active" else ""); prop.onClick (fun _ -> dispatch (SetZoom false)); prop.text "Full range" ]
+                ] ]
+            ] ]
+            match model.Error, model.Evaluation with
+            | Some error, _ -> Html.div [ prop.className "error-message"; prop.role "alert"; prop.text error ]
+            | None, Some evaluation when not (List.isEmpty evaluation.Estimates) -> Plot.view model dispatch
+            | None, Some _ -> Html.p "No included executable OAR models."
+            | None, None -> Html.p "Calculating…"
+            Html.div [ prop.className "focus-legend"; prop.role "group"; prop.ariaLabel "Highlight dose-response curve"; prop.children [
+                for definition in plottedDefinitions model do
+                    let selected = model.FocusedModel = Some definition.Id
+                    let estimate = estimates |> List.tryFind (fun e -> e.ModelId = definition.Id)
+                    Html.button [
+                        prop.className (if selected then "selected" else "")
+                        prop.ariaPressed selected
+                        prop.onClick (fun _ -> dispatch (FocusModel (if selected then None else Some definition.Id)))
+                        prop.children [
+                            Html.span [ prop.className "legend-line"; prop.style [ style.backgroundColor definition.Color ] ]
+                            Html.text definition.Organ
+                            match estimate with
+                            | Some item -> Html.span [ prop.className "legend-delta"; prop.text ("−1 Gy: " + marginalRiskText item) ]
+                            | None -> Html.none
+                        ]
+                    ]
+            ] ]
+        ] ]
+        Html.section [ prop.className "panel focus-summary"; prop.children [
+            Html.div [ prop.className "focus-section-title"; prop.children [
+                Html.h2 "Endpoint estimates"
+            ] ]
+            match model.Error with
+            | Some error -> Html.div [ prop.role "alert"; prop.className "error-message"; prop.text error ]
+            | None when model.Evaluation.IsNone -> Html.p "Calculating…"
+            | None ->
+                Html.div [ prop.className "focus-estimates"; prop.ariaLive.polite; prop.children [
+                    Html.div [ prop.className "focus-estimate-head"; prop.children [
+                        Html.span "Endpoint"
+                        Html.span "Dmean"
+                        Html.span "NTCP"
+                        Html.span "ΔNTCP (−1 Gy)"
+                        Html.span ""
+                    ] ]
+                    for definition in plottedDefinitions model do
+                        match estimates |> List.tryFind (fun value -> value.ModelId = definition.Id) with
+                        | Some estimate -> focusedEstimate definition estimate dispatch
+                        | None -> ()
+                ] ]
+        ] ]
+    ] ]
+
 /// Renders the calculator and model catalogue in the same persistent application shell.
 let view model dispatch =
     Html.div [ prop.className "app-shell"; prop.children [
         Html.header [ prop.className "app-header"; prop.children [
-            Html.a [ prop.className "brand"; prop.href "#"; prop.onClick (fun event -> event.preventDefault (); dispatch (Navigate Calculator)); prop.children [ brandMark; Html.div [ Html.strong "Risk-Based"; Html.span "Radiotherapy Planning" ] ] ]
+            Html.a [ prop.className "brand"; prop.href "#"; prop.onClick (fun event -> event.preventDefault (); dispatch (Navigate Calculator)); prop.children [
+                brandMark
+                Html.div [ Html.strong "Risk-Based"; Html.span "Radiotherapy Planning" ]
+            ] ]
             Html.nav [ prop.className "main-nav"; prop.ariaLabel "Main navigation"; prop.children [
                 Html.button [ prop.className (if model.Page = Calculator then "nav-item active" else "nav-item"); prop.onClick (fun _ -> dispatch (Navigate Calculator)); prop.text "Calculator" ]
-                Html.button [ prop.className (if model.Page = Models then "nav-item active" else "nav-item"); prop.onClick (fun _ -> dispatch (Navigate Models)); prop.children [ Html.text "NTCP models"; Html.span [ prop.className "nav-count"; prop.text (string model.Definitions.Length) ] ] ]
+                Html.button [ prop.className (if model.Page = Models then "nav-item active" else "nav-item"); prop.onClick (fun _ -> dispatch (Navigate Models)); prop.children [
+                    Html.text "NTCP models"
+                    Html.span [ prop.className "nav-count"; prop.text (string model.Definitions.Length) ]
+                ] ]
             ] ]
-            Html.span [ prop.className "prototype-label"; prop.children [ Html.span [ prop.className "status-dot" ]; Html.text "Research prototype" ] ]
         ] ]
-        Html.main [ prop.className "main-content"; prop.children [
-            Html.div [ prop.className "page-heading"; prop.children [
-                Html.div [
-                    Html.div [ prop.className "breadcrumb"; prop.text ("RISK-BASED RADIOTHERAPY PLANNING / " + if model.Page = Calculator then "CALCULATOR" else "MODEL CATALOGUE") ]
-                    Html.h1 (if model.Page = Calculator then "Understand the risk behind the dose." else "The evidence behind every curve.")
-                    Html.p (if model.Page = Calculator then "Explore published models using an example plan and only its available OARs." else "Inspect the equation, its assumptions and its published source.")
-                ]
-                if model.Page = Calculator then Html.button [ prop.className "reset-button"; prop.onClick (fun _ -> dispatch ResetExample); prop.text "↺  Reset example" ]
-                else Html.button [ prop.className "reset-button"; prop.onClick (fun _ -> dispatch (Navigate Calculator)); prop.text "←  Back to calculator" ]
-            ] ]
-            Html.div [ prop.className "example-banner"; prop.children [ Html.span [ prop.className "example-pill"; prop.text "EXAMPLE DATA" ]; Html.span "Synthetic patient & plan inputs. Published model equations. Research demonstration." ] ]
-            if model.Page = Calculator then Html.div [ prop.className "calculator-layout"; prop.children [ inputPane model dispatch; resultsPane model dispatch ] ]
-            else ModelCatalogue.view model dispatch
+        Html.main [ prop.className "main-content lean-main"; prop.children [
+            if model.Page = Calculator then
+                Html.div [ prop.className "focus-layout"; prop.children [
+                    focusedInputPane model dispatch
+                    focusedResults model dispatch
+                ] ]
+            else
+                ModelCatalogue.view model dispatch
         ] ]
-        Html.footer [ prop.className "app-footer"; prop.children [ Html.span "Risk-Based Radiotherapy Planning"; Html.span "F# · SAFE Stack"; Html.span "Research prototype · not validated for clinical decisions" ] ]
+        Html.footer [ prop.className "app-footer"; prop.children [ Html.span "Research prototype · not validated for clinical decisions" ] ]
     ] ]
 
 /// Starts the example calculator and loads the model catalogue.

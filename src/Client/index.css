@@ -1535,3 +1535,127 @@ svg {
 .model-runner-plot { margin-top: 19px; background: #fff; border: 1px solid #e0e8e4; border-radius: 7px; padding: 8px; }
 .model-runner-plot > svg { width: 100%; height: auto; }
 @media (max-width: 620px) { .model-runner { padding: 14px; } .runner-fields { grid-template-columns: 1fr; } }
+
+
+/* Clinical-focus presentation: minimal primary task, with the research detail view preserved. */
+.display-mode-switch { display: flex; align-items: center; gap: 3px; margin: -2px 0 19px; width: max-content; max-width: 100%; background: #e9efec; border-radius: 8px; padding: 4px; }
+.display-mode-switch > span { font-size: 9px; letter-spacing: 1px; font-weight: 700; color: #80938b; padding: 0 12px; }
+.display-mode-switch button { padding: 10px 15px; border-radius: 6px; font-size: 11px; color: #617976; background: none; }
+.display-mode-switch button.selected { color: #244e52; background: white; box-shadow: 0 1px 3px #244e5217; font-weight: 650; }
+.display-mode-switch button:focus-visible { outline-offset: 0; }
+.focus-layout { display: grid; grid-template-columns: minmax(255px, 315px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.focus-input { padding: 27px 24px 22px; }
+.focus-panel-heading { padding-bottom: 20px; }
+.focus-panel-heading h2 { font-size: 19px; letter-spacing: -0.5px; margin: 7px 0; font-weight: 600; color: #24464c; }
+.focus-panel-heading p { font-size: 11px; color: #738786; line-height: 1.7; }
+.focus-dose-list { display: grid; gap: 4px; }
+.focus-dose-list .dose-row { padding: 17px 0; margin: 0; border-top: 1px solid #edf1ef; }
+.focus-dose-list .dose-heading { margin-bottom: 8px; }
+.focus-dose-list .dose-heading label { font-weight: 650; font-size: 12px; color: #35545b; }
+.focus-dose-list .dose-heading .mean-label { display: none; }
+.focus-dose-list .dose-number { max-width: 150px; height: 42px; }
+.focus-dose-list .dose-number input { font-size: 16px; font-weight: 650; }
+.focus-dose-list .dose-endpoint { color: #82908e; font-size: 10px; }
+.focus-oar-select { margin-top: 20px; border-top: 1px solid #e5ece8; padding-top: 18px; }
+.focus-oar-select > strong { display: block; font-size: 11px; color: #56706c; margin-bottom: 12px; }
+.focus-advanced-link { display: block; margin: 22px 0 0; background: none; padding: 0; font-size: 10px; text-align: left; color: #34717a; text-decoration: underline; text-underline-offset: 3px; line-height: 1.6; }
+.focus-results { display: grid; gap: 18px; min-width: 0; }
+.focus-summary { padding: 26px 28px 18px; }
+.focus-section-title { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+.focus-section-title .eyebrow { display: block; margin-bottom: 7px; font-size: 9px; color: #7d928e; }
+.focus-section-title h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.4px; color: #25464e; }
+.focus-estimates { display: grid; }
+.focus-estimate { display: grid; grid-template-columns: minmax(0,1fr) minmax(92px, auto) 68px; gap: 14px; align-items: center; padding: 16px 0; border-top: 1px solid #edf0ee; }
+.focus-estimate-name { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.focus-estimate-name > div { min-width: 0; }
+.focus-estimate-name strong { display: block; font-size: 13px; font-weight: 650; color: #294c52; }
+.focus-estimate-name span:not(.organ-dot) { display: block; font-size: 10px; color: #83928f; margin-top: 5px; }
+.focus-estimate-measure { text-align: right; }
+.focus-estimate-measure strong { display: block; color: #284f56; font-size: 26px; letter-spacing: -0.9px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.focus-estimate-measure span { display: block; font-size: 10px; color: #80918e; margin-top: 4px; }
+.focus-detail-link { background: none; font-size: 10px; text-align: right; padding: 8px 0; color: #39767c; }
+.focus-integrity-note { color: #879792; font-size: 10px; line-height: 1.65; margin-top: 12px; }
+.focus-chart { padding: 25px 28px 22px; overflow: hidden; }
+.focus-chart .plot-wrap { margin-top: 0; }
+.focus-chart .plot-wrap svg { width: 100%; height: auto; }
+.focus-chart .focus-section-title { margin-bottom: 4px; }
+.focus-chart .plot-range { flex-shrink: 0; }
+.focus-chart .zoom-note { color: #6d807a; font-size: 10px; text-align: right; margin-top: -4px; }
+.focus-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 22px; margin-top: 3px; }
+.focus-legend button { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; color: #59726e; background: none; padding: 7px 0; }
+.focus-legend .legend-line { display: inline-block; height: 3px; width: 23px; border-radius: 2px; }
+.focus-banner { margin-bottom: 19px; border: 0; background: transparent; padding: 0; color: #73817d; font-size: 10px; }
+.focus-banner .example-pill { background: #edf2ee; }
+@media (max-width: 1100px) { .focus-layout { grid-template-columns: minmax(230px, 280px) minmax(0,1fr); gap: 13px; } .focus-estimate { gap: 9px; } .focus-chart, .focus-summary { padding: 20px; } }
+@media (max-width: 840px) { .focus-layout { grid-template-columns: 1fr; } .focus-dose-list { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 15px; } .focus-dose-list .dose-row { padding-top: 14px; } .focus-input { padding: 20px; } .focus-oar-select { margin-top: 12px; } }
+@media (max-width: 540px) { .focus-dose-list { grid-template-columns: 1fr; gap: 0; } .focus-estimate { grid-template-columns: 1fr auto; } .focus-detail-link { grid-column: 1 / -1; text-align: left; padding: 0 0 4px 22px; } .focus-estimate-measure strong { font-size: 23px; } .focus-section-title { align-items: start; } .focus-chart .plot-range { width: 100%; } .display-mode-switch button { padding: 9px; } }
+
+
+/* Plot-first clinical workspace. Only the single lean calculator is rendered. */
+.app-header { height: 72px; gap: 20px; }
+.app-header .brand { flex: 0 0 auto; }
+.app-header .main-nav { margin-left: auto; gap: 26px; }
+.lean-main { padding-top: 26px; }
+.lean-main .focus-layout { grid-template-columns: minmax(250px, 294px) minmax(0, 1fr); gap: 20px; }
+.lean-main .focus-input { padding: 25px 23px; }
+.lean-main .focus-input > .eyebrow { display: block; margin-bottom: 14px; color: #6b8580; }
+.lean-main .focus-dose-list { display: grid; grid-template-columns: 1fr; gap: 0; }
+.lean-main .lean-metric-row { border-top: 1px solid #e6edeb; padding: 19px 0 17px; }
+.lean-main .lean-metric-row:first-child { border-top: 0; }
+.lean-main .lean-metric-row .dose-heading { margin-bottom: 10px; }
+.lean-main .lean-metric-row .dose-heading label { font-weight: 650; font-size: 13px; letter-spacing: -0.15px; }
+.lean-main .lean-metric-row .dose-number { max-width: 166px; height: 42px; }
+.lean-main .lean-metric-row .dose-endpoint { display: block; margin-top: 7px; font-size: 10px; color: #778c89; }
+.lean-main .focus-oar-select { margin-top: 14px; padding-top: 17px; }
+.lean-main .focus-oar-select .available-oars { display: flex; gap: 6px; flex-wrap: wrap; }
+.lean-main .focus-oar-select .available-oar { font-size: 10px; padding: 7px 9px; }
+.lean-main .focus-results { display: flex; flex-direction: column; gap: 16px; }
+.lean-main .focus-chart { order: 0; padding: 22px 25px 20px; }
+.lean-main .focus-summary { order: 1; padding: 22px 25px 18px; }
+.lean-main .focus-section-title { margin-bottom: 8px; }
+.lean-main .focus-section-title h2 { font-weight: 630; font-size: 18px; letter-spacing: -0.3px; }
+.lean-main .focus-chart .plot-wrap svg { max-height: 405px; }
+.lean-main .focus-chart .zoom-note { display: none; }
+.lean-main .focus-legend { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0; }
+.lean-main .focus-legend button { display: inline-flex; gap: 7px; align-items: center; border: 1px solid #e2eae7; border-radius: 6px; padding: 7px 10px; font-size: 10px; color: #46615e; background: #fff; }
+.lean-main .focus-legend button.selected { border-color: #8cb4ad; background: #f1f8f5; box-shadow: inset 0 0 0 1px #8cb4ad3d; }
+.lean-main .focus-legend .legend-delta { color: #426763; font-weight: 620; white-space: nowrap; padding-left: 4px; border-left: 1px solid #d9e5df; }
+.lean-main .focus-estimate-head, .lean-main .focus-estimate { display: grid; grid-template-columns: minmax(145px, 1.5fr) minmax(72px, .7fr) minmax(82px, .7fr) minmax(115px, 1fr) 52px; gap: 12px; align-items: center; }
+.lean-main .focus-estimate-head { padding: 9px 0 13px; color: #758b88; text-transform: none; font-size: 10px; border-bottom: 1px solid #e6edeb; }
+.lean-main .focus-estimate-head span:nth-child(n + 2) { text-align: right; }
+.lean-main .focus-estimate { border-top: 0; border-bottom: 1px solid #edf1ef; padding: 18px 0; }
+.lean-main .focus-estimate:last-child { border-bottom: 0; }
+.lean-main .focus-estimate-name { gap: 9px; }
+.lean-main .focus-estimate-name strong { font-size: 12px; color: #2f5155; }
+.lean-main .focus-estimate-name span:not(.organ-dot) { font-size: 10px; }
+.lean-main .focus-estimate-dose { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; color: #71837f; }
+.lean-main .focus-estimate-risk { text-align: right; font-variant-numeric: tabular-nums; color: #234d55; font-size: 22px; font-weight: 650; letter-spacing: -.5px; }
+.lean-main .focus-estimate-delta { text-align: right; font-variant-numeric: tabular-nums; color: #38685e; font-size: 15px; font-weight: 620; }
+.lean-main .focus-detail-link { font-size: 10px; text-align: right; white-space: nowrap; color: #3a7376; padding: 7px 0; }
+@media (max-width: 1050px) {
+    .lean-main .focus-layout { grid-template-columns: 260px minmax(0, 1fr); gap: 14px; }
+    .lean-main .focus-chart, .lean-main .focus-summary { padding: 18px; }
+    .lean-main .focus-estimate-head, .lean-main .focus-estimate { gap: 7px; grid-template-columns: minmax(95px, 1.4fr) 63px 76px 92px 46px; }
+    .lean-main .focus-estimate-risk { font-size: 19px; }
+    .lean-main .focus-estimate-delta { font-size: 13px; }
+}
+@media (max-width: 850px) {
+    .lean-main .focus-layout { grid-template-columns: 1fr; }
+    .lean-main .focus-dose-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+    .lean-main .lean-metric-row { border: 0; border-right: 1px solid #e6edeb; padding: 10px 12px 10px 0; }
+    .lean-main .lean-metric-row:last-child { border-right: 0; }
+}
+@media (max-width: 580px) {
+    .app-header { height: auto; min-height: 70px; flex-wrap: wrap; }
+    .app-header .main-nav { gap: 10px; }
+    .lean-main .focus-dose-list { grid-template-columns: 1fr; gap: 0; }
+    .lean-main .lean-metric-row { border-right: 0; border-top: 1px solid #e6edeb; }
+    .lean-main .focus-estimate-head { display: none; }
+    .lean-main .focus-estimate { grid-template-columns: 1fr auto; gap: 8px 14px; }
+    .lean-main .focus-estimate-name { grid-column: 1 / -1; }
+    .lean-main .focus-estimate-dose, .lean-main .focus-estimate-risk, .lean-main .focus-estimate-delta { text-align: left; }
+    .lean-main .focus-estimate-dose::before { content: "Dmean "; display: block; color: #8a9a96; font-size: 9px; margin-bottom: 3px; }
+    .lean-main .focus-estimate-risk::before { content: "NTCP"; display: block; color: #8a9a96; font-size: 9px; margin-bottom: 3px; }
+    .lean-main .focus-estimate-delta::before { content: "ΔNTCP (−1 Gy)"; display: block; color: #8a9a96; font-size: 9px; margin-bottom: 3px; }
+    .lean-main .focus-detail-link { text-align: right; }
+}

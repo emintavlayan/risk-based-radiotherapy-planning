@@ -8,6 +8,14 @@ The initial research focus is lymphoma. The intended workflow combines plan dosi
 
 The research prototype includes a manual-entry calculator, **21 executable dose-response/relative-effect models** (three in the main calculator and 18 additional in the model runner), and a **29-entry model/evidence catalogue** transcribed from Brodin et al. Table 1, spanning **17 OAR categories**. The catalogue distinguishes implementation status, risk measures (NTCP/RR/OR/incidence), and required patient or DVH metrics. Synthetic inputs load automatically, and calculations run on the SAFE server.
 
+## Display modes
+
+The calculator now uses **a single lean view**: explicit Heart/Lungs/Liver Dmean inputs (Gy), dose-response graph **above** an endpoint table, and the absolute NTCP reduction for a 1 Gy dose decrease (`ΔNTCP (−1 Gy)`, percentage points). The graph is the primary workspace, with selectable organ curves; model descriptions and full equations remain in the 29-entry catalogue. Unused patient fields and explanatory text no longer occupy the main page; the previous detailed components remain in the source rather than being deleted.
+
+The adaptive plot follows the live dose/risk markers; Full range remains fixed for comparison. **A decrease in endpoint-specific NTCP is not the same as life-years gained.**
+
+See [Lean plot-first interface decisions](docs/CLINICAL-FOCUS.md). All NTCP calculations remain server-owned F# functions.
+
 ## Implemented prototype
 
 The calculator includes:
