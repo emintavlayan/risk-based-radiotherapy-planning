@@ -263,10 +263,6 @@ let private focusedResults model dispatch =
         Html.section [ prop.className "panel focus-summary"; prop.children [
             Html.div [ prop.className "focus-section-title"; prop.children [
                 Html.h2 "Endpoint estimates"
-                Html.span [ prop.className ("calculation-status " + if model.Busy then "busy" else ""); prop.children [
-                    Html.span [ prop.className "status-dot" ]
-                    Html.text (if model.Busy then "Updating" else "Calculated")
-                ] ]
             ] ]
             match model.Error with
             | Some error -> Html.div [ prop.role "alert"; prop.className "error-message"; prop.text error ]
@@ -313,7 +309,7 @@ let view model dispatch =
             else
                 ModelCatalogue.view model dispatch
         ] ]
-        Html.footer [ prop.className "app-footer"; prop.children [ Html.span "Risk-Based Radiotherapy Planning"; Html.span "F# · SAFE Stack"; Html.span "Research prototype · not validated for clinical decisions" ] ]
+        Html.footer [ prop.className "app-footer"; prop.children [ Html.span "Research prototype · not validated for clinical decisions" ] ]
     ] ]
 
 /// Starts the example calculator and loads the model catalogue.
