@@ -6,6 +6,34 @@ open Shared
 
 /// Represents client state checks for request ordering and screen navigation.
 let client = testList "Risk calculator state" [
+    testCase "Adaptive detail expands to fit a 30 Gy lung marker and its observed probability" <| fun _ ->
+        let bounds = plotBounds true [ { ModelId = "lung"; DoseGy = 30.0; Probability = 0.4775; ReductionForOneGy = 0.0; Curve = [] } ]
+        Expect.isGreaterThan bounds.MaxDoseGy 30.0 "Dose marker must remain inside the x-axis."
+        Expect.isGreaterThan bounds.MaxProbability 0.4775 "Risk marker must remain inside the y-axis."
+
+    testCase "Adaptive detail preserves original 30 Gy and 30 percent ranges for the example" <| fun _ ->
+        let example = [ { ModelId = "lung"; DoseGy = 14.0; Probability = 0.1085; ReductionForOneGy = 0.0; Curve = [] }
+                        { ModelId = "liver"; DoseGy = 26.0; Probability = 0.0019; ReductionForOneGy = 0.0; Curve = [] } ]
+        let bounds = plotBounds true example
+        Expect.equal bounds.MaxDoseGy 30.0 "Example dose axis remains useful at 30 Gy."
+        Expect.equal bounds.MaxProbability 0.30 "Example risk axis retains a 30 percent maximum."
+
+    testCase "Full axes remain fixed and comparable between plan revisions" <| fun _ ->
+        let bounds = plotBounds false [ { ModelId = "lung"; DoseGy = 30.0; Probability = 0.4775; ReductionForOneGy = 0.0; Curve = [] } ]
+        Expect.equal bounds.MaxDoseGy 50.0 "Full dose axis must remain fixed."
+        Expect.equal bounds.MaxProbability 1.0 "Full risk axis must remain at 100 percent."
+
+    testCase "Focused and detailed layouts preserve patient inputs and evaluation state" <| fun _ ->
+        let initial, _ = init ()
+        Expect.equal initial.DisplayMode ClinicalFocus "New design opens the focused view."
+        let edited, _ = update (SetForm { initial.Form with Lung = "30" }) initial
+        let detailed, _ = update (SetDisplayMode ResearchDetail) edited
+        let focused, _ = update (SetDisplayMode ClinicalFocus) detailed
+        Expect.equal detailed.Form.Lung "30" "Research detail must use the same edited plan."
+        Expect.equal focused.Form edited.Form "Returning to clinical focus must not reset the plan."
+        Expect.equal focused.RequestId edited.RequestId "Presentation change must not trigger recomputation."
+
+
     testCase "Available OAR selectors change the server request" <| fun _ ->
         let original = exampleForm ()
         let changed = toggleAvailableOar "heart" original
