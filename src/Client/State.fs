@@ -9,6 +9,9 @@ open Shared
 /// Represents an application screen without discarding calculator inputs.
 type Page = Calculator | Models
 
+/// Represents alternative presentations of the same scientific data and calculation state.
+type DisplayMode = ClinicalFocus | ResearchDetail
+
 /// Represents editable numeric text without coercing empty fields to zero.
 type Form = { Label: string; Age: string; Sex: Sex; Heart: string; Lung: string; Liver: string; CardiacRiskFactors: bool; Chemotherapy: bool; AvailableOars: string list }
 
@@ -16,7 +19,7 @@ type Form = { Label: string; Age: string; Sex: Sex; Heart: string; Lung: string;
 type Model = {
     Page: Page; Form: Form; Definitions: ModelDefinition list; Evaluation: PlanEvaluation option
     Error: string option; Busy: bool; RequestId: int; SelectedModel: string; FocusedModel: string option; Zoom: bool
-    CatalogueOar: string option
+    CatalogueOar: string option; DisplayMode: DisplayMode
     CatalogueValues: Map<string, string>; CatalogueEvaluation: CatalogueEvaluation option
     CatalogueError: string option; CatalogueBusy: bool
 }
@@ -29,6 +32,7 @@ type Msg =
     | SelectModel of string
     | FocusModel of string option
     | SetZoom of bool
+    | SetDisplayMode of DisplayMode
     | FilterCatalogueOar of string option
     | SetCatalogueValue of string * string
     | EvaluateCatalogueModel
@@ -125,7 +129,7 @@ let private calculate model =
 let init () =
     let model = {
         Page = Calculator; Form = exampleForm (); Definitions = []; Evaluation = None
-        Error = None; Busy = true; RequestId = 0; SelectedModel = "heart-hancock-brodin"; FocusedModel = None; Zoom = false; CatalogueOar = None
+        Error = None; Busy = true; RequestId = 0; SelectedModel = "heart-hancock-brodin"; FocusedModel = None; Zoom = true; CatalogueOar = None; DisplayMode = ClinicalFocus
         CatalogueValues = Map.empty; CatalogueEvaluation = None; CatalogueError = None; CatalogueBusy = false
     }
     let calculated, command = calculate model
@@ -141,6 +145,7 @@ let update message model =
     | SelectModel id -> { model with SelectedModel = id; Page = Models; CatalogueValues = Map.empty; CatalogueEvaluation = None; CatalogueError = None; CatalogueBusy = false }, Cmd.none
     | FocusModel id -> { model with FocusedModel = id }, Cmd.none
     | SetZoom zoom -> { model with Zoom = zoom }, Cmd.none
+    | SetDisplayMode mode -> { model with DisplayMode = mode }, Cmd.none
     | FilterCatalogueOar oar ->
         let selection =
             match oar with
@@ -201,3 +206,16 @@ let toggleAvailableOar oar form =
         if Set.contains oar selected then Set.remove oar selected
         else Set.add oar selected
     { form with AvailableOars = Set.toList updated }
+
+/// Represents the data-dependent bounds used by the optional detailed chart view.
+type PlotBounds = { MaxDoseGy: float; MaxProbability: float }
+
+/// Determines scientific axis limits while keeping every returned plan marker visible.
+let plotBounds zoom (estimates: EndpointEstimate list) =
+    if not zoom then { MaxDoseGy = 50.0; MaxProbability = 1.0 }
+    else
+        let peakDose = estimates |> List.map _.DoseGy |> List.fold max 0.0
+        let peakRisk = estimates |> List.map _.Probability |> List.fold max 0.0
+        let dose = max 30.0 (ceil ((peakDose + 2.0) / 5.0) * 5.0)
+        let risk = max 0.30 (ceil ((peakRisk + 0.04) / 0.05) * 0.05)
+        { MaxDoseGy = min 60.0 dose; MaxProbability = min 1.0 risk }
