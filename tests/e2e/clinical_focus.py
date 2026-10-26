@@ -12,7 +12,6 @@ with sync_playwright() as playwright:
     expect(page.locator(".nav-count")).to_have_text("29", timeout=30000)
     expect(page.locator(".lean-metric-row")).to_have_count(3)
     for name in ("Heart · Dmean", "Lungs · Dmean", "Liver · Dmean"):
-        expect(page.locator(".lean-metric-row")).to_contain_text([name]) if False else None
         assert page.get_by_text(name, exact=True).count() == 1, f"Missing required DVH metric label: {name}"
 
     for removed in (".page-heading", ".example-banner", ".display-mode-switch", ".prototype-label", ".focus-advanced-link"):
