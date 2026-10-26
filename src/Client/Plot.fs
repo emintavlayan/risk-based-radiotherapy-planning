@@ -16,8 +16,9 @@ let private curvePath maxDose maxRisk (points: CurvePoint list) =
 
 /// Draws scientific axes, published response curves and exact plan markers.
 let view model dispatch =
-    let maxDose, maxRisk = if model.Zoom then 30.0, 0.3 else 50.0, 1.0
     let estimates = model.Evaluation |> Option.map _.Estimates |> Option.defaultValue []
+    let bounds = plotBounds model.Zoom estimates
+    let maxDose, maxRisk = bounds.MaxDoseGy, bounds.MaxProbability
     Html.div [
         prop.className "plot-wrap"
         prop.children [
@@ -66,6 +67,6 @@ let view model dispatch =
                     ]
                 ]
             ]
-            if model.Zoom then Html.p [ prop.className "zoom-note"; prop.text "Detail view: 0–30 Gy and 0–30%. Values outside this window are clipped; the estimates below remain complete." ]
+            if model.Zoom then Html.p [ prop.className "zoom-note"; prop.text (sprintf "Adaptive detail: 0–%.0f Gy · 0–%.0f%%. Axis limits follow the current plan values." maxDose (maxRisk * 100.0)) ]
         ]
     ]
