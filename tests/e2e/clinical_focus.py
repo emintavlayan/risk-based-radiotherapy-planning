@@ -13,6 +13,7 @@ with sync_playwright() as playwright:
     expect(page.get_by_role("button", name="Clinical focus")).to_have_attribute("aria-pressed", "true", timeout=60000)
     expect(page.locator(".focus-estimate")).to_have_count(3, timeout=60000)
     expect(page.locator(".focus-chart .zoom-note")).to_contain_text("0–30 Gy", timeout=30000)
+    expect(page.locator(".focus-chart .zoom-note")).to_contain_text("0–15%", timeout=30000)
     page.screenshot(path=str(OUTPUT / "01-clinical-focus-actual-safe.png"), full_page=True, animations="disabled")
 
     page.locator("#lung-dose").fill("30")
