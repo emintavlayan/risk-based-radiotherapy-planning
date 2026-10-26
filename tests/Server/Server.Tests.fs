@@ -164,6 +164,16 @@ let server = testList "NTCP calculations" [
             let curvePoint = estimate.Curve |> List.find (fun point -> point.DoseGy = estimate.DoseGy)
             Expect.equal curvePoint.Probability estimate.Probability "A marker must lie exactly on its curve."
 
+    testCase "One-Gy NTCP sensitivity uses the same published curve as its plan marker" <| fun _ ->
+        let result = RiskCalculation.evaluate { Example.plan with MeanLungDoseGy = 30.0 } |> requireOk
+        for estimate in result.Estimates do
+            let atOneGyLess =
+                estimate.Curve
+                |> List.find (fun point -> abs (point.DoseGy - (estimate.DoseGy - 1.0)) < 1e-10)
+            let expectedReduction = estimate.Probability - atOneGyLess.Probability
+            Expect.isLessThan (abs (estimate.ReductionForOneGy - expectedReduction)) 1e-12
+                "The chart segment and reported percentage-point reduction must agree with the underlying NTCP curve."
+
     testCase "Clinical factors do not introduce unreported effects into dose-only models" <| fun _ ->
         let original = RiskCalculation.evaluate Example.plan |> requireOk
         let modified = RiskCalculation.evaluate { Example.plan with CardiacRiskFactors = true; Chemotherapy = false; AgeAtPlanCreation = 75.0; Sex = Male } |> requireOk
