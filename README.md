@@ -10,9 +10,11 @@ The research prototype includes a manual-entry calculator, **21 executable dose-
 
 ## Display modes
 
-The main calculator now opens in **Clinical focus**, a compact view of dose inputs, endpoint estimates and one dynamically fitted scientific chart. **Research detail** preserves the original detailed view, including patient and clinical factors; switching modes retains all plan values and server evaluations. The plot's adaptive detail expands or contracts around the current evaluated markers instead of clipping them at fixed 30 Gy/30% axes. Full range stays fixed for reproducible visual comparison.
+The calculator now uses **a single lean view**: explicit Heart/Lungs/Liver Dmean inputs (Gy), dose-response graph **above** an endpoint table, and the absolute NTCP reduction for a 1 Gy dose decrease (`ΔNTCP (−1 Gy)`, percentage points). The graph is the primary workspace, with selectable organ curves; model descriptions and full equations remain in the 29-entry catalogue. Unused patient fields and explanatory text no longer occupy the main page; the previous detailed components remain in the source rather than being deleted.
 
-See [Clinical focus UI decisions](docs/CLINICAL-FOCUS.md). All clinical numerical calculations still run on the SAFE server; the two layouts only change the presentation.
+The adaptive plot follows the live dose/risk markers; Full range remains fixed for comparison. **A decrease in endpoint-specific NTCP is not the same as life-years gained.**
+
+See [Lean plot-first interface decisions](docs/CLINICAL-FOCUS.md). All NTCP calculations remain server-owned F# functions.
 
 ## Implemented prototype
 
