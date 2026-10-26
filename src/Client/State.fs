@@ -217,5 +217,5 @@ let plotBounds zoom (estimates: EndpointEstimate list) =
         let peakDose = estimates |> List.map _.DoseGy |> List.fold max 0.0
         let peakRisk = estimates |> List.map _.Probability |> List.fold max 0.0
         let dose = max 30.0 (ceil ((peakDose + 2.0) / 5.0) * 5.0)
-        let risk = max 0.30 (ceil ((peakRisk + 0.04) / 0.05) * 0.05)
+        let risk = max 0.05 (ceil ((peakRisk + 0.04) / 0.05) * 0.05)
         { MaxDoseGy = min 60.0 dose; MaxProbability = min 1.0 risk }
