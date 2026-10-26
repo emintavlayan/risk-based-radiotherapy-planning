@@ -55,6 +55,27 @@ let view model dispatch =
                                         svg.children [
                                             Svg.path [ svg.d (curvePath maxDose maxRisk estimate.Curve); svg.fill "none"; svg.stroke definition.Color; svg.strokeWidth 2.8; svg.strokeLineCap "round" ]
                                             Svg.line [ svg.x1 (x maxDose estimate.DoseGy); svg.x2 (x maxDose estimate.DoseGy); svg.y1 (y maxRisk estimate.Probability); svg.y2 360; svg.stroke definition.Color; svg.strokeWidth 1; svg.strokeDasharray [| 3; 5 |]; svg.custom ("opacity", 0.45) ]
+                                            if estimate.DoseGy >= 1.0 then
+                                                Svg.g [ svg.children [
+                                                    Svg.line [
+                                                        svg.x1 (x maxDose (estimate.DoseGy - 1.0))
+                                                        svg.y1 (y maxRisk (estimate.Probability - estimate.ReductionForOneGy))
+                                                        svg.x2 (x maxDose estimate.DoseGy)
+                                                        svg.y2 (y maxRisk estimate.Probability)
+                                                        svg.stroke definition.Color
+                                                        svg.strokeWidth 5.0
+                                                        svg.strokeLinecap "round"
+                                                    ]
+                                                    Svg.circle [
+                                                        svg.cx (x maxDose (estimate.DoseGy - 1.0))
+                                                        svg.cy (y maxRisk (estimate.Probability - estimate.ReductionForOneGy))
+                                                        svg.r 3.4
+                                                        svg.fill "white"
+                                                        svg.stroke definition.Color
+                                                        svg.strokeWidth 1.7
+                                                        svg.children [ Svg.title (sprintf "One Gy less: NTCP reduced by %s percentage points" (riskText estimate.ReductionForOneGy)) ]
+                                                    ]
+                                                ] ]
                                             Svg.circle [ svg.cx (x maxDose estimate.DoseGy); svg.cy (y maxRisk estimate.Probability); svg.r 10; svg.fill definition.Color; svg.custom ("opacity", 0.12) ]
                                             Svg.circle [
                                                 svg.cx (x maxDose estimate.DoseGy); svg.cy (y maxRisk estimate.Probability); svg.r 5
@@ -67,6 +88,6 @@ let view model dispatch =
                     ]
                 ]
             ]
-            if model.Zoom then Html.p [ prop.className "zoom-note"; prop.text (sprintf "Adaptive detail: 0–%.0f Gy · 0–%.0f%%. Axis limits follow the current plan values." maxDose (maxRisk * 100.0)) ]
+            if model.Zoom then Html.p [ prop.className "zoom-note"; prop.text (sprintf "0–%.0f Gy · 0–%.0f%%" maxDose (maxRisk * 100.0)) ]
         ]
     ]
