@@ -11,12 +11,12 @@ let client = testList "Risk calculator state" [
         Expect.isTrue (bounds.MaxDoseGy > 30.0) "Dose marker must remain inside the x-axis."
         Expect.isTrue (bounds.MaxProbability > 0.4775) "Risk marker must remain inside the y-axis."
 
-    testCase "Adaptive detail preserves original 30 Gy and 30 percent ranges for the example" <| fun _ ->
+    testCase "Adaptive detail contracts axes for the current example without hiding markers" <| fun _ ->
         let example = [ { ModelId = "lung"; DoseGy = 14.0; Probability = 0.1085; ReductionForOneGy = 0.0; Curve = [] }
                         { ModelId = "liver"; DoseGy = 26.0; Probability = 0.0019; ReductionForOneGy = 0.0; Curve = [] } ]
         let bounds = plotBounds true example
         Expect.equal bounds.MaxDoseGy 30.0 "Example dose axis remains useful at 30 Gy."
-        Expect.equal bounds.MaxProbability 0.30 "Example risk axis retains a 30 percent maximum."
+        Expect.isTrue (abs (bounds.MaxProbability - 0.15) < 1e-12) "Example risk axis adapts to 15 percent."
 
     testCase "Full axes remain fixed and comparable between plan revisions" <| fun _ ->
         let bounds = plotBounds false [ { ModelId = "lung"; DoseGy = 30.0; Probability = 0.4775; ReductionForOneGy = 0.0; Curve = [] } ]
