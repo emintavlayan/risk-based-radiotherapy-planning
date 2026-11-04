@@ -126,7 +126,7 @@ module HazardRatio =
     let value (HazardRatio value) =
         value
 
-    /// Converts excess relative hazard to total relative hazard by adding one.
+    /// Converts non-negative excess HR to total HR; retains Result for consistency with validated quantity constructors.
     let ofExcess excess =
         create (
             1.0
@@ -135,10 +135,14 @@ module HazardRatio =
 
     /// Converts total relative hazard to excess relative hazard, rejecting protective effects in this non-negative model.
     let toExcess ratio =
-        ExcessHazardRatio.create (
-            value ratio
-            - 1.0
-        )
+        if value ratio < 1.0 then
+            Error
+                $"HR={value ratio} is protective. This non-negative excess-loss model requires HR >= 1; protective associations remain representable as HazardRatio but require a signed benefit/loss model. No clipping is applied."
+        else
+            ExcessHazardRatio.create (
+                value ratio
+                - 1.0
+            )
 
 /// Represents baseline incidence hazard in inverse years, never an annual probability.
 type IncidenceHazard = private IncidenceHazard of AnnualRate
@@ -203,6 +207,13 @@ module ExcessIncidenceHazard =
         )
         |> Result.map ExcessIncidenceHazard
 
+    /// Converts total HR to excess incidence, explicitly rejecting protective associations.
+    let fromHazardRatio ratio baseline =
+        result {
+            let! excess = HazardRatio.toExcess ratio
+            return! fromBaseline excess baseline
+        }
+
     /// Returns excess incidence hazard in inverse years.
     let value (ExcessIncidenceHazard rate) =
         AnnualRate.value rate
@@ -216,6 +227,13 @@ module ExcessMortalityHazard =
             * MortalityHazard.value baseline
         )
         |> Result.map ExcessMortalityHazard
+
+    /// Converts total HR to excess mortality, explicitly rejecting protective associations.
+    let fromHazardRatio ratio baseline =
+        result {
+            let! excess = HazardRatio.toExcess ratio
+            return! fromBaseline excess baseline
+        }
 
     /// Returns excess mortality hazard in inverse years.
     let value (ExcessMortalityHazard rate) =
@@ -242,3 +260,22 @@ module ExpectedLifeYearsLost =
     /// Returns expected life years lost in years.
     let value (ExpectedLifeYearsLost value) =
         value
+
+/// Represents remaining life conditional on being alive at a declared attained age.
+type RemainingLifeAtAge = private {
+    Age: AttainedAge
+    Life: RemainingLife
+}
+
+[<RequireQualifiedAccess>]
+module RemainingLifeAtAge =
+    /// Declares the conditioning age of a supplied remaining life expectancy; provenance must establish this interpretation.
+    let create age life = { Age = age; Life = life }
+
+    /// Returns the attained age on which the supplied remaining life is conditioned.
+    let age input =
+        input.Age
+
+    /// Returns conditional remaining life in years.
+    let value input =
+        RemainingLife.value input.Life

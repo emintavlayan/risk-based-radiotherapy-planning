@@ -60,11 +60,20 @@ module Brodin2012 =
     let thyroidParameters exposureAge =
         let age = ExposureAge.value exposureAge
 
-        ThyroidParameters.create
-            (2.81<1 / Gy>
-             - 0.15<1 / Gy / year>
-               * age)
-            0.00164<1 / Gy^2>
+        let maximumAge =
+            2.81
+            / 0.15
+            * 1.0<year>
+
+        if age > maximumAge then
+            Error
+                $"Brodin 2012 thyroid age formula requires exposure age <= {float maximumAge:F6} years; received {float age:F6}. The printed slope becomes negative above this limit. Supply independently established ThyroidParameters to DoseResponse.thyroid for another age model."
+        else
+            ThyroidParameters.create
+                (2.81<1 / Gy>
+                 - 0.15<1 / Gy / year>
+                   * age)
+                0.00164<1 / Gy^2>
 
     /// Calculates unmodified published responses; supplied modifiers and source interpretation remain separate.
     let unmodifiedExcessHazardRatio exposureAge input =

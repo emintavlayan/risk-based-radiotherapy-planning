@@ -4,8 +4,11 @@ open FsToolkit.ErrorHandling
 
 /// Represents the two distinct event pathways in Equations 2 and 4.
 type ConsequenceEvidence =
-    | IncidentEvent of baselineIncidence: IncidenceHazard * populationLife: RemainingLife * postEventLife: RemainingLife
-    | FatalHeartFailure of baselineCauseSpecificMortality: MortalityHazard * populationLife: RemainingLife
+    | IncidentEvent of
+        baselineIncidence: IncidenceHazard *
+        populationLife: RemainingLifeAtAge *
+        postEventLife: RemainingLifeAtAge
+    | FatalHeartFailure of baselineCauseSpecificMortality: MortalityHazard * populationLife: RemainingLifeAtAge
 
 /// Represents externally supplied age-specific evidence; survival must use the declared starting cohort.
 type AgeSpecificEvidence = {
@@ -39,6 +42,31 @@ type IntegrationWindow = private {
     Start: AttainedAge
     Finish: AttainedAge
 }
+
+/// Represents a survival integral over a finite horizon, distinct from full remaining life.
+type RestrictedMeanLife = private {
+    Horizon: float<year>
+    TerminalSurvival: SurvivalProbability
+    Area: float<year>
+}
+
+[<RequireQualifiedAccess>]
+module RestrictedMeanLife =
+    /// Returns the finite elapsed-time horizon of the survival integral.
+    let horizon input =
+        input.Horizon
+
+    /// Returns terminal survival, identifying whether an unintegrated tail remains.
+    let terminalSurvival input =
+        input.TerminalSurvival
+
+    /// Returns whether survival beyond the finite horizon remains unaccounted for.
+    let hasUnintegratedTail input =
+        SurvivalProbability.value input.TerminalSurvival > 0.0
+
+    /// Returns the restricted mean in years without converting it to full remaining life.
+    let value input =
+        input.Area
 
 [<RequireQualifiedAccess>]
 module LifeLossDensity =
@@ -102,16 +130,31 @@ module LifeLoss =
                 match evidence.Endpoint, evidence.Consequence with
                 | Linear HeartFailure, FatalHeartFailure(mortality, populationLife) ->
                     result {
+                        do!
+                            Result.requireTrue
+                                "Population life expectancy must be conditional on evidence.Age."
+                                (RemainingLifeAtAge.age populationLife = evidence.Age)
+
                         let! excess = ExcessMortalityHazard.fromBaseline ratio mortality
-                        return ExcessMortality excess, RemainingLife.value populationLife
+                        return ExcessMortality excess, RemainingLifeAtAge.value populationLife
                     }
                 | Linear HeartFailure, _ -> Error "Heart failure requires cause-specific mortality for Equation 4."
                 | _, FatalHeartFailure _ -> Error "The Equation 4 mortality pathway is restricted to heart failure."
                 | _, IncidentEvent(incidence, populationLife, postEventLife) ->
                     result {
+                        do!
+                            Result.requireTrue
+                                "Population life expectancy must be conditional on evidence.Age."
+                                (RemainingLifeAtAge.age populationLife = evidence.Age)
+
+                        do!
+                            Result.requireTrue
+                                "Post-event life expectancy must be conditional on evidence.Age."
+                                (RemainingLifeAtAge.age postEventLife = evidence.Age)
+
                         let difference =
-                            RemainingLife.value populationLife
-                            - RemainingLife.value postEventLife
+                            RemainingLifeAtAge.value populationLife
+                            - RemainingLifeAtAge.value postEventLife
 
                         let! difference =
                             Validation.nonNegative "Population minus post-event life expectancy" difference
@@ -205,8 +248,8 @@ module LifeLoss =
                 |> ExpectedLifeYearsLost.create
         }
 
-    /// Integrates a conditional post-event survival curve to a finite remaining-life horizon.
-    let remainingLifeFromSurvival (points: (float<year> * SurvivalProbability) list) =
+    /// Integrates conditional survival to its supplied finite horizon and preserves terminal survival explicitly.
+    let restrictedMeanFromSurvival (points: (float<year> * SurvivalProbability) list) =
         result {
             do!
                 Result.requireTrue
@@ -245,13 +288,27 @@ module LifeLoss =
                             * width
                     })
 
-            do!
-                Result.requireTrue
-                    "Full remaining life requires a terminal survival probability of zero; otherwise this is restricted mean survival."
-                    (SurvivalProbability.value (snd (List.last points)) = 0.0)
-
-            return!
+            let! area =
                 areas
                 |> List.sum
-                |> RemainingLife.create
+                |> Validation.nonNegative "Restricted mean survival"
+
+            return {
+                Horizon = fst (List.last points)
+                TerminalSurvival = snd (List.last points)
+                Area = area
+            }
+        }
+
+    /// Integrates full conditional remaining life only when the supplied survival tail reaches zero.
+    let remainingLifeFromSurvival points =
+        result {
+            let! restricted = restrictedMeanFromSurvival points
+
+            do!
+                Result.requireTrue
+                    "Full remaining life requires terminal survival zero. Use restrictedMeanFromSurvival for a finite horizon with an unintegrated tail."
+                    (not (RestrictedMeanLife.hasUnintegratedTail restricted))
+
+            return! RemainingLife.create (RestrictedMeanLife.value restricted)
         }

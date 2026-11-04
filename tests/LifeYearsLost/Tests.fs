@@ -51,6 +51,10 @@ let private survival value =
     SurvivalProbability.create value
     |> ok
 
+/// Creates an explicitly age-conditioned remaining-life fixture.
+let private conditionalLife attained value =
+    RemainingLifeAtAge.create (age attained) (life value)
+
 /// Creates synthetic incidence evidence independently of the paper example.
 let private syntheticEvidence attained = {
     Endpoint = Linear LungCancer
@@ -61,8 +65,8 @@ let private syntheticEvidence attained = {
         IncidentEvent(
             IncidenceHazard.create 0.01<1 / year>
             |> ok,
-            life 20.0<year>,
-            life 5.0<year>
+            conditionalLife attained 20.0<year>,
+            conditionalLife attained 5.0<year>
         )
 }
 
@@ -354,7 +358,7 @@ let run () =
                 FatalHeartFailure(
                     MortalityHazard.create 0.001<1 / year>
                     |> ok,
-                    life 20.0<year>
+                    conditionalLife 60.0<year> 20.0<year>
                 )
     }
 
@@ -405,7 +409,8 @@ let run () =
         "Negative life shortening"
         (LifeLoss.atAge exposure Female (Linear LungCancer) unmodifiedRatio {
             syntheticEvidence 60.0<year> with
-                Consequence = IncidentEvent(baseline, life 1.0<year>, life 2.0<year>)
+                Consequence =
+                    IncidentEvent(baseline, conditionalLife 60.0<year> 1.0<year>, conditionalLife 60.0<year> 2.0<year>)
         })
 
     let window =
@@ -480,3 +485,161 @@ let run () =
         ])
 
     printfn "Scientific domain checks passed."
+
+/// Runs focused regression checks for review findings and boundary semantics.
+let reviewChecks () =
+    let exposure =
+        ExposureAge.create 4.0<year>
+        |> ok
+
+    let ratio =
+        HazardRatio.create 1.5
+        |> ok
+
+    let incidence =
+        IncidenceHazard.create 0.02<1 / year>
+        |> ok
+
+    let mortality =
+        MortalityHazard.create 0.01<1 / year>
+        |> ok
+
+    near
+        "Total-HR incidence convenience"
+        0.01
+        (ExcessIncidenceHazard.fromHazardRatio ratio incidence
+         |> ok
+         |> ExcessIncidenceHazard.value
+         |> float)
+
+    near
+        "Total-HR mortality convenience"
+        0.005
+        (ExcessMortalityHazard.fromHazardRatio ratio mortality
+         |> ok
+         |> ExcessMortalityHazard.value
+         |> float)
+
+    let protective =
+        HazardRatio.create 0.8
+        |> ok
+
+    match HazardRatio.toExcess protective with
+    | Error message ->
+        check
+            "Protective decision is explicit"
+            (message.Contains("protective")
+             && message.Contains("signed"))
+    | Ok _ -> failwith "Protective HR must not enter non-negative excess loss."
+
+    rejects "Protective incidence convenience" (ExcessIncidenceHazard.fromHazardRatio protective incidence)
+    rejects "Protective mortality convenience" (ExcessMortalityHazard.fromHazardRatio protective mortality)
+
+    for years in
+        [
+            18.7<year>
+            2.81
+            / 0.15
+            * 1.0<year>
+        ] do
+        check
+            "Non-negative thyroid age boundary"
+            (Brodin2012.thyroidParameters (
+                ExposureAge.create years
+                |> ok
+             )
+             |> Result.isOk)
+
+    match
+        Brodin2012.thyroidParameters (
+            ExposureAge.create 18.8<year>
+            |> ok
+        )
+    with
+    | Error message ->
+        check
+            "Thyroid age error explains limit"
+            (message.Contains("exposure age")
+             && message.Contains("negative"))
+    | Ok _ -> failwith "Negative thyroid slope accepted."
+
+    rejects "Negative absorbed dose" (AbsorbedDose.create -1.0<Gy>)
+
+    let restricted =
+        LifeLoss.restrictedMeanFromSurvival [ 0.0<year>, survival 1.0; 10.0<year>, survival 0.2 ]
+        |> ok
+
+    near
+        "Finite-horizon area"
+        6.0
+        (RestrictedMeanLife.value restricted
+         |> float)
+
+    near
+        "Finite-horizon duration"
+        10.0
+        (RestrictedMeanLife.horizon restricted
+         |> float)
+
+    near
+        "Finite-horizon terminal survival"
+        0.2
+        (RestrictedMeanLife.terminalSurvival restricted
+         |> SurvivalProbability.value)
+
+    check "Tail is explicitly flagged" (RestrictedMeanLife.hasUnintegratedTail restricted)
+
+    let complete =
+        LifeLoss.restrictedMeanFromSurvival [ 0.0<year>, survival 1.0; 10.0<year>, survival 0.0 ]
+        |> ok
+
+    check "Zero tail is marked complete" (not (RestrictedMeanLife.hasUnintegratedTail complete))
+
+    rejects
+        "Restricted curve still needs valid ordering"
+        (LifeLoss.restrictedMeanFromSurvival [ 0.0<year>, survival 1.0; 0.0<year>, survival 0.2 ])
+
+    let wrongPopulation = {
+        syntheticEvidence 60.0<year> with
+            Consequence =
+                IncidentEvent(incidence, conditionalLife 59.0<year> 20.0<year>, conditionalLife 60.0<year> 5.0<year>)
+    }
+
+    let wrongPostEvent = {
+        syntheticEvidence 60.0<year> with
+            Consequence =
+                IncidentEvent(incidence, conditionalLife 60.0<year> 20.0<year>, conditionalLife 61.0<year> 5.0<year>)
+    }
+
+    let excess =
+        ExcessHazardRatio.create 0.5
+        |> ok
+
+    rejects
+        "Population conditioning age mismatch"
+        (LifeLoss.atAge exposure Female (Linear LungCancer) excess wrongPopulation)
+
+    rejects
+        "Post-event conditioning age mismatch"
+        (LifeLoss.atAge exposure Female (Linear LungCancer) excess wrongPostEvent)
+
+    let wrongDeathAge = {
+        syntheticEvidence 60.0<year> with
+            Endpoint = Linear HeartFailure
+            Consequence = FatalHeartFailure(mortality, conditionalLife 59.0<year> 20.0<year>)
+    }
+
+    rejects
+        "Fatal-event conditioning age mismatch"
+        (LifeLoss.atAge exposure Female (Linear HeartFailure) excess wrongDeathAge)
+
+    let maxExcess =
+        ExcessHazardRatio.create System.Double.MaxValue
+        |> ok
+
+    check
+        "Extreme finite excess still converts safely"
+        (HazardRatio.ofExcess maxExcess
+         |> Result.isOk)
+
+    printfn "Review regression checks passed."

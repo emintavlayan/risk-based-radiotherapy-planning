@@ -79,7 +79,8 @@ module ExcessHazardMultiplier =
     let source (input: ExcessHazardMultiplier) =
         input.Source
 
-    /// Scales excess relative hazard explicitly; no conversion from a reported sex comparison is implied.
+    /// Applies only an independently justified excess-HR multiplier for the target endpoint, sex and reference; a female/male comparison is not such a multiplier.
+    /// Numeric validation and provenance do not verify applicability: callers must establish the target context before applying this formula.
     let apply input excess =
         ExcessHazardRatio.create (
             input.Multiplier

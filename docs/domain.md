@@ -15,7 +15,9 @@ A hazard is an instantaneous event rate among people still in the relevant risk 
 | ExcessMortalityHazard | Radiation-attributable death hazard | 1/year | Excess HR × baseline mortality |
 | AnnualRate | Validated numerical annual rate | 1/year | Supporting quantity, not a probability |
 | SurvivalProbability | Probability that an original cohort member remains alive | 1 | Starting cohort must be declared externally |
-| RemainingLife | Remaining expected lifetime conditional on being alive at the event age | year | Different from cohort expected loss |
+| RemainingLife | Remaining expected lifetime | year | Different from cohort expected loss |
+| RemainingLifeAtAge | Remaining life explicitly conditional on a declared attained age | year | Both prognosis inputs must match evidence.Age |
+| RestrictedMeanLife | Survival integral to a finite elapsed horizon | year | Retains horizon and terminal survival; distinct from full remaining life |
 | LifeLossDensity | Expected years lost per year of attained age | year/year = 1 | Integrand, not a finite-bin loss |
 | ExpectedLifeYearsLost | Integrated cohort expectation | year | Result of integrating the density |
 | DifferentialDvh | Complete fractional differential dose distribution | 1 | Fractions sum to one |
@@ -54,7 +56,9 @@ AgeSpecificEvidence identifies endpoint, sex and attained age. The caller must s
 
 The caller must also establish calendar period, population, hazard definition, survivor starting cohort, and the conditioning of post-event survival. The code cannot determine these from a rate alone.
 
-Survivor survival is not automatically conditioned on surviving to the current event age: doing so would remove the intended competing-mortality weighting. Post-event survival, in contrast, is conditional on reaching the event age. A truncated survival curve with a non-zero terminal value yields restricted mean survival; the full RemainingLife function rejects it.
+Survivor survival is not automatically conditioned on surviving to the current event age: doing so would remove the intended competing-mortality weighting. Population and post-event life expectancies must both be remaining lifetimes conditional on being alive at evidence.Age. ConsequenceEvidence requires RemainingLifeAtAge values, and atAge checks their declared ages against evidence.Age, including the mortality pathway. The wrapper records the caller's declaration; validating the source conditioning still requires checking the data.
+
+LifeLoss.restrictedMeanFromSurvival integrates a valid conditional survival curve over the supplied finite horizon. Its RestrictedMeanLife result exposes horizon, terminalSurvival and hasUnintegratedTail. It is not interchangeable with RemainingLife. LifeLoss.remainingLifeFromSurvival continues to require a zero terminal survival probability for full remaining life. Neither function extrapolates a tail or silently treats a restricted mean as full expectancy. A finite-horizon LYL workflow would also need matched prognosis horizons; that is not inferred here.
 
 No plan-specific competing-risk adjustment or first-event probability is inferred. No endpoint summation function labels overlapping events as an exact total expectancy decrement.
 
@@ -68,3 +72,15 @@ ExcessHazardMultiplier means exactly a multiplier of HR-1. It is dimensionless a
 DoseResponse.linear accepts a supplied slope in Gy^-1. DoseResponse.thyroid accepts validated supplied slope and falloff in Gy^-1 and Gy^-2. Brodin2012 keeps publication-specific transcriptions separate from these generic equations.
 
 A risk ratio or cumulative-event probability is not required by the implemented loss kernel. Add such types when a workflow actually computes or consumes them, with endpoint, comparison and time horizon. Never use an unqualified risk ratio in a hazard argument.
+
+
+## Review decisions
+
+- The Brodin thyroid age transcription returns an explicit error above 2.81/0.15 years (approximately 18.733333), where its slope becomes negative. It does not truncate the slope or claim a clinical validity limit. Independently established coefficients can be supplied to the generic nonlinear response.
+- FractionalDoseBin and AbsoluteDoseBin are public records, but their Dose field requires AbsorbedDose, whose representation is private. Raw negative gray values cannot be assigned to those fields. AbsorbedDose.create rejects negative and non-finite inputs.
+- HazardRatio may represent a protective association. HazardRatio.toExcess explicitly declines HR<1 because this kernel models non-negative excess loss. A signed benefit/loss model would require separate semantics; values are not clipped.
+- ExcessIncidenceHazard.fromHazardRatio and ExcessMortalityHazard.fromHazardRatio provide total-HR convenience functions with the same protective-association decision.
+- HazardRatio.ofExcess retains Result for consistency with the other validated constructors. For current valid finite non-negative excess HR values the conversion succeeds.
+- ExcessHazardMultiplier.apply is a mathematical scaling operation, not scientific approval. Before using it, establish that the multiplier applies to the target endpoint, patient sex and reference normalization. A reported female-to-male comparison is not automatically an excess-HR multiplier for either sex. Passing a number with a source string does not establish applicability; the typed reported comparison cannot be passed directly to apply.
+
+The printed-paper integration window remains e+1 through 110 years; its helper does not claim that one year is an endpoint-specific biological latency. Integration ordering, coverage and survival checks remain unchanged.

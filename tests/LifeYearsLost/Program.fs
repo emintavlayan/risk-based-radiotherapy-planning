@@ -4,4 +4,5 @@ module LifeYearsLost.TestRunner
 [<EntryPoint>]
 let main _ =
     LifeYearsLost.Tests.run ()
+    LifeYearsLost.Tests.reviewChecks ()
     0
