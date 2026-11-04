@@ -18,3 +18,5 @@ release.sh
 *.orig
 *.fsproj.user
 *.DotSettings.user
+# Generated Linux deployment output
+deploy-linux/

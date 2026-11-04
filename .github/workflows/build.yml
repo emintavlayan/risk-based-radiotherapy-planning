@@ -15,7 +15,7 @@ jobs:
             - uses: actions/setup-node@v4
               with:
                   node-version: 22
-            - name: Run numerical and client state checks
+            - name: Compile and run infrastructure test harnesses
               run: dotnet run -- RunTestsHeadless
             - name: Build runnable server and client bundle
               run: dotnet run -- Bundle

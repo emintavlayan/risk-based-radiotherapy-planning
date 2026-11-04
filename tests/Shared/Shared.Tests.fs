@@ -6,5 +6,5 @@ open Fable.Mocha
 open Expecto
 #endif
 
-/// Represents the shared contract suite, with numerical checks owned by the server tests.
-let shared = testList "Shared contracts" []
+/// Represents the shared infrastructure suite awaiting domain contracts.
+let shared = testList "Shared infrastructure" []
