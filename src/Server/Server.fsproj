@@ -7,9 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="paket.references" />
-    <Compile Include="Domain.fs" />
-    <Compile Include="NtcpModels.fs" />
-    <Compile Include="RiskCalculation.fs" />
     <Compile Include="Server.fs" />
   </ItemGroup>
   <ItemGroup>

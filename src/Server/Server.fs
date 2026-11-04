@@ -3,24 +3,24 @@ module Server
 open SAFE
 open Saturn
 open Shared
-open RiskBasedRadiotherapyPlanning
 open Fable.Remoting.Server
 
-/// Creates the typed API around the pure calculation workflow.
-let riskApi _ : IRiskApi = {
-    getModels = fun () -> async { return NtcpModels.definitions () }
-    evaluatePlan = fun input -> async { return RiskCalculation.evaluate input }
+/// Returns the infrastructure status without performing scientific calculations.
+let applicationApi _ : IApplicationApi = {
+    getStatus = fun () -> async {
+        return { Name = "Risk-Based Radiotherapy Planning"; Stage = "Domain modelling pending" }
+    }
 }
 
-/// Logs an unexpected API failure while keeping internal details out of client responses.
+/// Logs unexpected infrastructure failures.
 let private handleApiError (error: exn) _ =
-    eprintfn "Risk API failure: %O" error
+    eprintfn "Application API failure: %O" error
     Ignore
 
-/// Represents the typed SAFE remoting routes.
-let webApp = Api.make (riskApi, errorHandler = handleApiError)
+/// Represents the infrastructure remoting routes.
+let webApp = Api.make (applicationApi, errorHandler = handleApiError)
 
-/// Represents the application host serving calculations and bundled client assets.
+/// Represents the SAFE host and bundled client assets.
 let app = application {
     use_router webApp
     memory_cache
@@ -28,7 +28,7 @@ let app = application {
     use_gzip
 }
 
-/// Starts the SAFE application host.
+/// Starts the application host.
 [<EntryPoint>]
 let main _ =
     run app

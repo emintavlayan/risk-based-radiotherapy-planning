@@ -1,124 +1,47 @@
 # Risk-Based Radiotherapy Planning
 
-An F# / SAFE Stack application for evaluating radiotherapy plans using published normal tissue complication probability (NTCP) models, patient characteristics, and clinical risk factors.
+**Work in progress.** This repository is a fresh F# / SAFE foundation for a life-years-lost application. Scientific domain modelling and calculation workflows have not yet been implemented.
 
-The initial research focus is lymphoma. The intended workflow combines plan dosimetry with evidence-based models to present endpoint-specific risk estimates and support treatment-planning decisions.
+The previous calculator and published-model catalogue are preserved in [NTCP Explorer](https://github.com/emintavlayan/ntcp-explorer).
 
-## Current status
+## Current state
 
-The first research prototype is implemented: a manual-entry calculator, three published NTCP models, a source-linked model catalogue, and interactive scientific dose-response plots. Synthetic patient and plan data load automatically on startup. Calculations run on the SAFE server.
+- Fable / Elmish client with a minimal application screen.
+- Saturn server, typed infrastructure API and shared contracts.
+- Existing development, packaging and test harnesses.
+- No scientific inputs, equations, coefficients or numerical results.
 
-## Implemented prototype
+## Next work
 
-The calculator includes:
+Review the source papers together, agree terminology and notation, then develop small explicit domain types and pure calculation functions. Keep paper symbols, units, assumptions and source references traceable. Verify numerical examples before introducing application workflows.
 
-- A patient and plan section containing age at plan creation, recorded sex, and the dosimetric inputs required by each model.
-- A clinical factors section with clearly labelled selections and toggles.
-- Three published NTCP model definitions, including their endpoints, equations, coefficients, units, applicability, and source publications.
-- Interactive dose-response curves with a marker showing the current plan's input and estimated risk.
+Use small modules, single-line `///` documentation for every function, and `Result<_, string>` with `FsToolkit.ErrorHandling` for fallible workflows. No domain design is implied by the infrastructure API.
 
-The included models are cardiac mortality (Hancock / Brodin, linear), radiation pneumonitis (Marks / QUANTEC, logistic), and radiation-induced liver disease (Pan / QUANTEC, LKB with n = 1). Each curve and its plan marker use the same server model implementation.
+## Development
 
-These three equations use dose only. Age, recorded sex, cardiac risk factors, and chemotherapy are retained as explicit example inputs; the interface states that they do not modify these equations. Future clinical-factor-aware models will use their published relationships.
-
-See [the demo guide](docs/DEMO.md) for a short presentation sequence, exact parameter sources, and server deployment commands. This prototype has not been validated for clinical decisions.
-
-## Architecture
-
-- **SAFE server:** input validation, model evaluation, and calculation workflows.
-- **Fable / Elmish client:** input forms, model definitions, and interactive visualisation.
-- **Shared contracts:** the input and output definitions used between client and server.
-- **Future read-only ESAPI plugin:** extract plan data, resolve structure names, and obtain the required DVH metrics for submission to the server.
-
-Manual entry and ESAPI import will feed the same calculation workflow. Patient age will have an explicit reference date so that age at plan creation and age at treatment are distinguishable where required.
-
-## Development principles
-
-- Light domain-driven design with explicit F# types.
-- Small modules and pure, clearly named calculation functions.
-- Side effects at application boundaries.
-- Railway-oriented error handling using `Result<_, string>` and `FsToolkit.ErrorHandling` computation expressions.
-- A single-line `///` documentation comment for every function.
-- Published equations, units, applicability, model versions, and evidence kept traceable.
-- Numerical checks against independently calculated reference examples.
-
-## Planned direction
-
-1. Extend the implemented calculator and catalogue with clinical-factor-aware models and model uncertainty.
-2. ESAPI extraction and structure-name / DVH-metric mapping.
-3. Comparison of multiple plans and their individual endpoint estimates.
-4. Life-years-lost calculations with the required survival, prognosis, and competing-risk data.
-5. Planning suggestions and automated generation of deliverable alternatives.
-6. Clinical evaluation of plan trade-offs, including patient preferences.
-
-Life years lost is one outcome within the broader risk profile. Endpoint probabilities, relative risks, and life-years-lost estimates retain their own meanings and units.
-
-## Run locally
-
-### Prerequisites
-
-- .NET 8 SDK, as selected by `global.json`.
-- Node.js 18 or higher.
-- npm 9 or higher.
-
-The application retains the SAFE template's existing build commands.
-
-### Start the application
-
-From the repository root:
+Requires .NET 8, Node.js 18/20/22 and a compatible npm version.
 
 ```sh
 dotnet run
 ```
 
-Open <http://localhost:8080>.
-
-### Run the tests
-
-```sh
-dotnet run -- WatchRunTests
-```
-
-Client tests are served at <http://localhost:8081>; server tests run in the terminal.
-
-For a headless test run:
+Open http://localhost:8080.
 
 ```sh
 dotnet run -- RunTestsHeadless
-```
-
-### Build a deployment bundle
-
-```sh
 dotnet run -- Bundle
 ```
 
-The template also contains an `Azure` target. Its deployment configuration in `Build.fs` must be customised before use.
+The test harness currently contains empty suites. Passing them establishes no scientific validation. GitHub Actions compiles the solution, runs the harness and packages the server and client.
 
-A multi-stage [Dockerfile](Dockerfile) is included for server hosting. The [demo guide](docs/DEMO.md#run-a-server-bundle) also shows how to run the compiled bundle directly. GitHub Actions runs the numerical and client-state tests and builds an application bundle.
-
-## Repository layout
+## Layout
 
 | Path | Purpose |
 | --- | --- |
-| `src/Client` | Fable / Elmish client |
-| `src/Server` | Saturn server |
-| `src/Shared` | Shared F# types and contracts |
-| `tests/Client` | Client tests |
-| `tests/Server` | Server tests |
-| `tests/Shared` | Shared tests |
-| `Build.fs` | Development, test, and packaging targets |
+| src/Client | Minimal client and styling |
+| src/Server | Infrastructure host and status API |
+| src/Shared | Infrastructure contracts |
+| tests | Retained test harnesses |
+| Build.fs | Development and packaging commands |
 
-## Scientific starting points
-
-- [Brodin et al. (2014): Interactive decision-support tool for risk-based radiation therapy plan comparison for Hodgkin lymphoma](https://doi.org/10.1016/j.ijrobp.2013.10.028).
-- [Brodin et al. (2012): Life years lost — comparing potentially fatal late complications after radiotherapy for pediatric medulloblastoma on a common scale](https://pmc.ncbi.nlm.nih.gov/articles/PMC3402656/).
-
-## SAFE Stack
-
-The application starts from the [SAFE template](https://safe-stack.github.io/docs/template-overview/). Framework documentation:
-
-- [SAFE Stack](https://safe-stack.github.io/docs/)
-- [Saturn](https://saturnframework.org/)
-- [Fable](https://fable.io/docs/)
-- [Elmish](https://elmish.github.io/elmish/)
+The existing running deployment is separate from this source cleanup.
