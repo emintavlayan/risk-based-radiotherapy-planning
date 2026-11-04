@@ -1,6 +1,6 @@
 # Risk ratio and hazard ratio: conditional relationship
 
-The quoted formula is mathematically valid under a single-event proportional-hazards model:
+The following relationship holds under a single-event proportional-hazards model:
 
 HR = ln(1 - RR × R0) / ln(1 - R0).
 
@@ -12,13 +12,13 @@ Under proportional hazards, h1(t)=HR×h0(t). Thus H1(t)=HR×H0(t), and S1(t)=S0(
 
 1 - RR×R0 = (1-R0)^HR.
 
-Taking logarithms gives the quoted expression. Once risks are supplied at the same known horizon, the numerical horizon does not separately enter this equation. It remains essential to their interpretation.
+Taking logarithms gives the expression above. Once risks are supplied at the same known horizon, the numerical horizon does not separately enter this equation. It remains essential to their interpretation.
 
 Require 0<R0<1 and 0<=RR×R0<1 for a finite result. If R0=0, the finite-horizon risks do not identify HR this way. If RR×R0=1, the logarithm diverges. Invalid or missing assumptions must not be silently repaired.
 
 Source relationship: [MathWorks Cox model documentation](https://www.mathworks.com/help/stats/cox-proportional-hazard-regression.html), survival equation S_X(t)=S_0(t)^HR.
 
-## Recalculated values for RR=1.7
+## Numerical illustration
 
 | Reference cumulative risk | Comparison cumulative risk | HR under the stated model |
 | --- | --- | --- |
@@ -28,11 +28,7 @@ Source relationship: [MathWorks Cox model documentation](https://www.mathworks.c
 | 30% | 51% | 2.000000 |
 | 40% | 68% | 2.230574 |
 
-The formula in the quoted AI response is correct under these assumptions, but several of its tabulated values are incorrect.
-
 For RR>1 and 0<R0<1/RR, the resulting HR is strictly greater than RR, tending to RR as R0 tends to zero. One way to see this is that f(x)=-ln(1-x)/x is increasing on (0,1), so HR/RR=f(RR×R0)/f(R0)>1.
-
-Therefore this formula cannot transform RR=1.7 into HR=1.21 for the same comparison. It does not explain Brodin's multiplier. Brodin applies 1.21 to an already calculated excess HR; that is a separate operation with a separate reference.
 
 ## Implementation decision
 

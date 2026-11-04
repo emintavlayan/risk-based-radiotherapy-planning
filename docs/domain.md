@@ -63,7 +63,7 @@ No plan-specific competing-risk adjustment or first-event probability is inferre
 
 ReportedSexComparison preserves the female-to-male direction, the reported association measure (or its unresolved meaning) and the source. It is not accepted by ExcessHazardMultiplier.apply.
 
-ExcessHazardMultiplier means exactly a multiplier of HR-1. It is dimensionless and includes provenance. Its constructor validates the number and reference; it does not certify scientific validity. No 1.21 default or risk-ratio conversion is embedded.
+ExcessHazardMultiplier means exactly a multiplier of HR-1. It is dimensionless and includes provenance. Its constructor validates the number and reference; it does not certify scientific validity. Multipliers are supplied explicitly rather than inferred from reported comparisons.
 
 DoseResponse.linear accepts a supplied slope in Gy^-1. DoseResponse.thyroid accepts validated supplied slope and falloff in Gy^-1 and Gy^-2. Brodin2012 keeps publication-specific transcriptions separate from these generic equations.
 

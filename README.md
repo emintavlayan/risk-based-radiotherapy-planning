@@ -1,6 +1,6 @@
 # Risk-Based Radiotherapy Planning
 
-**Work in progress.** This repository is a fresh F# / SAFE foundation for a life-years-lost application. A separate research domain now models the Brodin 2012 life-years-lost equations with units of measure and an explicit scientific audit.
+**Work in progress.** An F# / SAFE application for modelling radiation-related late effects as expected life years lost. The scientific domain uses explicit quantities, units of measure and pure calculation functions, with publication-specific parameters kept in separate adapters.
 
 The previous calculator and published-model catalogue are preserved in [NTCP Explorer](https://github.com/emintavlayan/ntcp-explorer).
 
@@ -10,18 +10,18 @@ The previous calculator and published-model catalogue are preserved in [NTCP Exp
 - Saturn server, typed infrastructure API and shared contracts.
 - Existing development, packaging and test harnesses.
 - Independent LifeYearsLost domain with typed hazards, dose responses, survival weighting and numerical integration.
-- [Scientific reading guide and equation audit](docs/brodin-2012/README.md), including unresolved interpretations.
+- [Domain and source-code guide](docs/README.md).
 - No clinical calculation workflow or loaded population datasets.
 
 ## Scientific domain
 
-Start with the [Brodin 2012 reading guide](docs/brodin-2012/README.md). It maps the clinical vocabulary to the F# files and distinguishes transcription, implementation choices and possible article mistakes.
+Start with the [documentation guide](docs/README.md). It maps the clinical vocabulary, calculation flow and units to the F# files. The current [Brodin 2012 adapter](docs/brodin-2012/README.md) supplies one set of publication-specific parameters.
 
 ```sh
 dotnet run --project tests/LifeYearsLost/LifeYearsLost.Tests.fsproj
 ```
 
-The domain tests use synthetic inputs to verify equations and invariants. Published examples, lifetime totals and modality comparisons are not reproduction targets. Parameters whose derivation is unresolved remain explicit sourced inputs.
+The domain tests use synthetic inputs to verify equations and invariants. Coefficients, population data and modifiers are explicit inputs with source information.
 
 ## Development
 
@@ -48,7 +48,7 @@ The retained infrastructure suites are empty. The separate scientific suite exer
 | src/Server | Infrastructure host and status API |
 | src/Shared | Infrastructure contracts |
 | src/LifeYearsLost | Independent scientific domain |
-| docs/brodin-2012 | Clinical vocabulary, source map and equation audit |
+| docs | Domain guide, model references and separate research notes |
 | tests | Retained test harnesses |
 | Build.fs | Development and packaging commands |
 
