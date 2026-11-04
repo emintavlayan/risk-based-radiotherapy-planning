@@ -1,6 +1,6 @@
 # Risk-Based Radiotherapy Planning
 
-**Work in progress.** This repository is a fresh F# / SAFE foundation for a life-years-lost application. Scientific domain modelling and calculation workflows have not yet been implemented.
+**Work in progress.** This repository is a fresh F# / SAFE foundation for a life-years-lost application. A separate research domain now models the Brodin 2012 life-years-lost equations with units of measure and an explicit scientific audit.
 
 The previous calculator and published-model catalogue are preserved in [NTCP Explorer](https://github.com/emintavlayan/ntcp-explorer).
 
@@ -9,13 +9,20 @@ The previous calculator and published-model catalogue are preserved in [NTCP Exp
 - Fable / Elmish client with a minimal application screen.
 - Saturn server, typed infrastructure API and shared contracts.
 - Existing development, packaging and test harnesses.
-- No scientific inputs, equations, coefficients or numerical results.
+- Independent LifeYearsLost domain with typed hazards, dose responses, survival weighting and numerical integration.
+- [Scientific reading guide and equation audit](docs/brodin-2012/README.md), including unresolved interpretations.
+- No clinical calculation workflow or loaded population datasets.
 
-## Next work
+## Scientific domain
 
-Review the source papers together, agree terminology and notation, then develop small explicit domain types and pure calculation functions. Keep paper symbols, units, assumptions and source references traceable. Verify numerical examples before introducing application workflows.
+Start with the [Brodin 2012 reading guide](docs/brodin-2012/README.md). It maps the clinical vocabulary to the F# files and distinguishes transcription, implementation choices and possible article mistakes.
 
-Use small modules, single-line `///` documentation for every function, and `Result<_, string>` with `FsToolkit.ErrorHandling` for fallible workflows. No domain design is implied by the infrastructure API.
+```sh
+dotnet run --project tests/LifeYearsLost/LifeYearsLost.Tests.fsproj
+dotnet fsi examples/Brodin2012.fsx
+```
+
+The Figure 2 example is an age-specific calculation. Published lifetime totals and modality comparisons are not reproduced: the original population tables, survival fits and patient DVHs are not supplied.
 
 ## Development
 
@@ -32,7 +39,7 @@ dotnet run -- RunTestsHeadless
 dotnet run -- Bundle
 ```
 
-The test harness currently contains empty suites. Passing them establishes no scientific validation. GitHub Actions compiles the solution, runs the harness and packages the server and client.
+The retained infrastructure suites are empty. The separate scientific suite exercises the domain equations, numerical invariants and invalid inputs; it does not establish clinical validity. GitHub Actions runs it and compile-time misuse checks before the infrastructure build and bundle.
 
 ## Layout
 
@@ -41,6 +48,8 @@ The test harness currently contains empty suites. Passing them establishes no sc
 | src/Client | Minimal client and styling |
 | src/Server | Infrastructure host and status API |
 | src/Shared | Infrastructure contracts |
+| src/LifeYearsLost | Independent scientific domain |
+| docs/brodin-2012 | Clinical vocabulary, source map and equation audit |
 | tests | Retained test harnesses |
 | Build.fs | Development and packaging commands |
 
