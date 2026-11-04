@@ -1,4 +1,7 @@
 {
+    "[fsharp]": {
+        "editor.formatOnSave": true
+    },
     "tailwindCSS.includeLanguages": {
         "fsharp": "html"
     },

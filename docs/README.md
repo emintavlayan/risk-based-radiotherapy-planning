@@ -31,5 +31,7 @@ The tests check synthetic calculations, numerical invariants, invalid inputs and
 
 ## Additional references
 
+- [F# formatting](formatting.md).
+
 - [Risk and hazard relationships](risk-and-hazard.md).
 - [Research questions and interpretation notes](research-questions.md), kept separately from the software's operating documentation.
