@@ -54,13 +54,18 @@ The indexed abstracts and the Brodin article do not resolve these questions. Dir
 
 ## Implementation consequence
 
-There is no selectable sex-normalization policy, arbitrary sex-multiplier API or automatic patient-specific dose-to-loss pipeline.
+Reported sex comparisons and supplied mathematical multipliers have different types. There is no inferred conversion or hard-coded 1.21. The caller may supply an excess-hazard multiplier with its source or declared assumption, or supply the final excess HR directly to the loss kernel. Numerical validation does not certify the scientific assumption.
 
-The code retains:
+Generic dose-response equations accept explicit coefficients with units. Synthetic tests check arithmetic and invariants; reproducing the publication's example is not a requirement.
 
-- typed, unit-checked hazard algebra;
-- unmodified Table 1 response functions, explicitly named as such;
-- the life-loss kernel consuming an already specified excess hazard ratio;
-- a diagnostic transcription of Figure 2, clearly separate from a general scientific rule.
+The [risk-to-hazard derivation](risk-and-hazard.md) is a separate issue. It cannot turn RR=1.7 into HR=1.21 under its stated assumptions.
 
-The Figure 2 test verifies arithmetic only. It does not validate 1.21. Patient-specific use of Table 1 remains blocked at the scientific-review stage until this normalization is established.
+## Additional normalization possibility
+
+A Cox model centered at mean covariates uses log-scale centering. For binary sex with female reference weight p and a between-sex hazard ratio r, a female-versus-centered multiplier would be r^(1-p), rather than the arithmetic-mixture expression above. Setting r=1.7 and the multiplier to 1.21 would imply p≈0.640765. This is another mathematical consistency construction, not evidence of the method used by Brodin. It also concerns total HR unless separately justified for excess HR.
+
+Source: [MathWorks Cox model documentation](https://www.mathworks.com/help/stats/cox-proportional-hazard-regression.html), centered-baseline HR equations. Different normalization conventions reinforce why the source estimand and reference must be known.
+
+## Further source tracing, 4 November 2026
+
+The cited Travis and Gilbert 2005 item was identified as Radiat Res 163(6):695–696, [PMID 16044495](https://pubmed.ncbi.nlm.nih.gov/16044495/). Its accessible PubMed record has no abstract and did not provide the normalization. The cited sex-comparison full texts remain unverified. No retrieved source established the derivation of 1.21; this remains an unknown source detail, not a demonstrated error.

@@ -26,7 +26,7 @@ Private constructors and Result-returning creation functions reject non-finite v
 
 1. Select an endpoint and its required organ-dose descriptor.
 2. Convert dose to excess HR using Table 1. Mean dose is used for the five linear responses. Thyroid requires a differential DVH: evaluate each bin's nonlinear response before averaging.
-3. Resolve the sex normalization scientifically before connecting dose response to a patient-specific loss calculation. Reported male:female ratios are evidence, not automatically applied multipliers.
+3. Supply any required excess-hazard modifier explicitly, with its source or declared assumption. A reported sex comparison is evidence, not an automatically inferred multiplier.
 4. Multiply excess HR by the matching age-specific, sex-specific baseline incidence hazard. For heart failure, use baseline cause-specific mortality instead.
 5. Multiply by survivor survival from the chosen starting cohort.
 6. For incidence endpoints, multiply by population remaining life minus post-event remaining life. For heart failure deaths, multiply by population remaining life.
@@ -50,10 +50,21 @@ This is the paper's attribution framework. It is not an exact replacement for a 
 
 ## Population data obligations
 
-AgeSpecificEvidence identifies endpoint, sex and attained age. The caller must supply properly matched population data. The function verifies endpoint, sex and event pathway. Integrating samples requires one exposure age, endpoint and excess hazard ratio, strictly increasing ages, non-increasing survivor survival and exact coverage of the chosen bounds.
+AgeSpecificEvidence identifies endpoint, sex and attained age. The caller must supply properly matched population data. The function verifies endpoint, sex and event pathway. Integrating samples requires one exposure age, sex and endpoint (excess HR may vary with attained age), strictly increasing ages, non-increasing survivor survival and exact coverage of the chosen bounds.
 
 The caller must also establish calendar period, population, hazard definition, survivor starting cohort, and the conditioning of post-event survival. The code cannot determine these from a rate alone.
 
 Survivor survival is not automatically conditioned on surviving to the current event age: doing so would remove the intended competing-mortality weighting. Post-event survival, in contrast, is conditional on reaching the event age. A truncated survival curve with a non-zero terminal value yields restricted mean survival; the full RemainingLife function rejects it.
 
 No plan-specific competing-risk adjustment or first-event probability is inferred. No endpoint summation function labels overlapping events as an exact total expectancy decrement.
+
+
+## Evidence and supplied mathematical inputs
+
+ReportedSexComparison preserves the female-to-male direction, the reported association measure (or its unresolved meaning) and the source. It is not accepted by ExcessHazardMultiplier.apply.
+
+ExcessHazardMultiplier means exactly a multiplier of HR-1. It is dimensionless and includes provenance. Its constructor validates the number and reference; it does not certify scientific validity. No 1.21 default or risk-ratio conversion is embedded.
+
+DoseResponse.linear accepts a supplied slope in Gy^-1. DoseResponse.thyroid accepts validated supplied slope and falloff in Gy^-1 and Gy^-2. Brodin2012 keeps publication-specific transcriptions separate from these generic equations.
+
+A risk ratio or cumulative-event probability is not required by the implemented loss kernel. Add such types when a workflow actually computes or consumes them, with endpoint, comparison and time horizon. Never use an unqualified risk ratio in a hazard argument.

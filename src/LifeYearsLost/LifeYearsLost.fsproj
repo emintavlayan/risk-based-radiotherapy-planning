@@ -6,7 +6,9 @@
   <ItemGroup>
     <Compile Include="Units.fs" />
     <Compile Include="Quantities.fs" />
+    <Compile Include="Evidence.fs" />
     <Compile Include="DoseVolume.fs" />
+    <Compile Include="DoseResponse.fs" />
     <Compile Include="Brodin2012.fs" />
     <Compile Include="LifeLoss.fs" />
   </ItemGroup>

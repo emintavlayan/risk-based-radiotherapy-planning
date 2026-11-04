@@ -12,7 +12,7 @@ Primary source: supplied final published PDF, Brodin et al., Cancer 2012;118:543
 | Thyroid β1=2.81-0.15e | Table 1; ref.13 Bhatti 2010 | Intercept Gy^-1; age slope Gy^-1 year^-1 |
 | Thyroid β4=0.00164 | Table 1 | Gy^-2 |
 | Male:female ratios | Table 1 | Evidence only, no automatic normalization |
-| Female lung modifier 1.21 | Figure 2, p.5434 | Used only in worked example |
+| Female lung modifier 1.21 | Figure 2, p.5434 | Reported evidence only; not an implementation default |
 | Excess rate | Eq.1, p.5433 | Excess HR × baseline annual hazard |
 | Incidence loss | Eqs.2/3, p.5433 | Survival × excess rate × difference in remaining life |
 | HF mortality loss | Eq.4, p.5434 | Explicit excess-mortality interpretation, see audit |

@@ -19,10 +19,9 @@ Start with the [Brodin 2012 reading guide](docs/brodin-2012/README.md). It maps 
 
 ```sh
 dotnet run --project tests/LifeYearsLost/LifeYearsLost.Tests.fsproj
-dotnet fsi examples/Brodin2012.fsx
 ```
 
-The Figure 2 example is an age-specific calculation. Published lifetime totals and modality comparisons are not reproduced: the original population tables, survival fits and patient DVHs are not supplied.
+The domain tests use synthetic inputs to verify equations and invariants. Published examples, lifetime totals and modality comparisons are not reproduction targets. Parameters whose derivation is unresolved remain explicit sourced inputs.
 
 ## Development
 

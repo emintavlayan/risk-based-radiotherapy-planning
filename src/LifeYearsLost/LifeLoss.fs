@@ -109,8 +109,8 @@ module LifeLoss =
         /// Checks that integration samples belong to the same calculation.
         let sameContext (sample: AgeSpecificLoss) =
             sample.Exposure = samples.Head.Exposure && sample.Sex = samples.Head.Sex
-            && sample.Endpoint = samples.Head.Endpoint && sample.ExcessRatio = samples.Head.ExcessRatio
-        do! Result.requireTrue "Samples must use one patient context, endpoint and excess hazard ratio." (samples |> List.forall sameContext)
+            && sample.Endpoint = samples.Head.Endpoint
+        do! Result.requireTrue "Samples must use one exposure context, sex and endpoint." (samples |> List.forall sameContext)
         let! intervals =
             samples
             |> List.pairwise

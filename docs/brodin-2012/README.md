@@ -10,13 +10,14 @@ The supplied final published PDF is the primary transcription source. Equations 
 2. [Clinical vocabulary and calculation flow](domain.md): what each quantity means.
 3. [Equation audit and unresolved questions](audit.md): suspected inconsistencies, interpretations and limitations.
 4. [Source map](sources.md): coefficients, equations and external verification.
-5. [Executable Figure 2 example](../../examples/Brodin2012.fsx).
-6. Read the F# types in this order:
+5. Read the F# types in this order:
 
 | File | What to inspect |
 | --- | --- |
 | [Units.fs](../../src/LifeYearsLost/Units.fs) | Gray, years, cubic centimetres and registry denominators |
 | [Quantities.fs](../../src/LifeYearsLost/Quantities.fs) | Total HR, excess HR, incidence and mortality hazards |
+| [Evidence.fs](../../src/LifeYearsLost/Evidence.fs) | Reported comparisons versus supplied excess-hazard multipliers |
+| [DoseResponse.fs](../../src/LifeYearsLost/DoseResponse.fs) | Generic equations with explicit supplied coefficients |
 | [DoseVolume.fs](../../src/LifeYearsLost/DoseVolume.fs) | Absolute versus fractional differential DVHs |
 | [Brodin2012.fs](../../src/LifeYearsLost/Brodin2012.fs) | Table 1 coefficients and Equations 1/5 |
 | [LifeLoss.fs](../../src/LifeYearsLost/LifeLoss.fs) | Equations 2/3/4 and integration |
@@ -27,10 +28,9 @@ From the repository root, with .NET 8:
 
 ```sh
 dotnet run --project tests/LifeYearsLost/LifeYearsLost.Tests.fsproj
-dotnet fsi examples/Brodin2012.fsx
 ```
 
-The scientific project is independent of the application UI and uses FsToolkit.ErrorHandling. It does not change the running calculator. The example uses only Figure 2 inputs and explicitly labels two illustrative life expectancies whose difference is the published 18.6 years.
+The scientific project is independent of the application UI and uses FsToolkit.ErrorHandling. Tests use synthetic evidence to check equations, type boundaries and numerical invariants. Reproducing Figure 2 is not required.
 
 ## Scope
 
@@ -38,4 +38,8 @@ Implemented: all five linear dose responses, the unmodified thyroid differential
 
 Not supplied: original population hazard tables, post-event survival tables, fitted CCSS survival/extrapolation data, ten patient DVHs, coefficient confidence distributions, or the paired Monte Carlo/bootstrap analysis. Consequently no published lifetime totals, modality comparisons, clinical predictions, or uncertainty intervals are claimed.
 
-The 4–15-year thyroid age restriction is an implementation boundary based on the treated sample, not a published validation range. Sex normalization is unresolved; no generic sex-modifier API is exposed. The loss kernel accepts an already specified excess HR independently of the dose-response transcription. The paper's bounds e+1 to 110 can be requested explicitly; other bounds are also explicit.
+Generic dose-response functions accept explicit coefficients with units. A supplied ExcessHazardMultiplier carries its source or declared assumption and can only multiply excess HR. It is not inferred from a reported sex comparison. Table 1 sex comparisons retain their unresolved statistical meaning as typed evidence.
+
+The printed thyroid age formula is available separately as a source transcription and rejects negative resulting coefficients. This mathematical boundary is not a clinical validity range. The paper applied the model to ages 4–15; wider applicability remains a scientific question.
+
+See the [RR-to-HR derivation](risk-and-hazard.md): that conversion does not explain the 1.21 modifier.

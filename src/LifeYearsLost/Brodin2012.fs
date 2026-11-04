@@ -8,9 +8,6 @@ type LinearEndpoint = BreastCancer | LungCancer | StomachCancer | HeartFailure |
 type Endpoint = Linear of LinearEndpoint | ThyroidCancer
 /// Represents the dosimetric descriptor required by each response family.
 type DoseResponseInput = MeanOrganDose of LinearEndpoint * AbsorbedDose | ThyroidDvh of DifferentialDvh
-/// Represents typed thyroid response parameters transcribed from Table 1.
-type ThyroidParameters = { LinearSlope: float<1/Gy>; QuadraticFalloff: float<1/Gy^2> }
-
 [<RequireQualifiedAccess>]
 module Brodin2012 =
     /// Identifies the publication used for this research implementation.
@@ -25,35 +22,31 @@ module Brodin2012 =
         | MyocardialInfarction -> 0.096<1/Gy>
 
     /// Returns the reported female-to-male ratios as evidence, not ready-to-use multipliers.
-    let reportedFemaleToMaleRatio = function
+    let private reportedFemaleToMaleRatio = function
         | Linear BreastCancer -> None
         | Linear LungCancer | ThyroidCancer -> Some 1.7
         | Linear StomachCancer -> Some 3.7
         | Linear HeartFailure -> Some 1.4
         | Linear MyocardialInfarction -> Some 0.6
 
-    /// Restricts Table 1 transcription to the paper's treated ages of four through fifteen.
-    let thyroidParameters exposureAge = result {
+    /// Preserves Table 1 sex comparisons as evidence with unresolved statistical meaning.
+    let reportedSexComparison endpoint =
+        match reportedFemaleToMaleRatio endpoint with
+        | None -> Ok None
+        | Some ratio ->
+            ReportedSexComparison.create ratio UnspecifiedRiskComparison (sourceDoi + ", Table 1")
+            |> Result.map Some
+
+    /// Evaluates the printed age formula where its coefficients remain non-negative, without asserting clinical validity.
+    let thyroidParameters exposureAge =
         let age = ExposureAge.value exposureAge
-        do! Result.requireTrue "Thyroid age extrapolation is unreviewed; supported study ages are 4-15 years." (age >= 4.0<year> && age <= 15.0<year>)
-        return { LinearSlope = 2.81<1/Gy> - 0.15<1/Gy/year> * age; QuadraticFalloff = 0.00164<1/Gy^2> }
-    }
+        ThyroidParameters.create (2.81<1/Gy> - 0.15<1/Gy/year> * age) 0.00164<1/Gy^2>
 
-    /// Evaluates the dimensionless thyroid response at one dose before volume averaging.
-    let private thyroidAtDose parameters dose =
-        let d = AbsorbedDose.value dose
-        parameters.LinearSlope * d * exp (-(parameters.QuadraticFalloff * d * d))
-
-    /// Calculates the unmodified Table 1 response; unresolved sex normalization is deliberately excluded.
-    let unmodifiedExcessHazardRatio exposureAge input = result {
-        let! unmodified =
-            match input with
-            | MeanOrganDose (endpoint, dose) ->
-                ExcessHazardRatio.create (linearSlope endpoint * AbsorbedDose.value dose)
-            | ThyroidDvh dvh -> result {
-                let! parameters = thyroidParameters exposureAge
-                let value = DifferentialDvh.bins dvh |> List.sumBy (fun bin -> bin.Fraction * thyroidAtDose parameters bin.Dose)
-                return! ExcessHazardRatio.create value
-              }
-        return unmodified
-    }
+    /// Calculates unmodified published responses; supplied modifiers and source interpretation remain separate.
+    let unmodifiedExcessHazardRatio exposureAge input =
+        match input with
+        | MeanOrganDose (endpoint, dose) -> DoseResponse.linear (linearSlope endpoint) dose
+        | ThyroidDvh dvh -> result {
+            let! parameters = thyroidParameters exposureAge
+            return! DoseResponse.thyroid parameters dvh
+          }

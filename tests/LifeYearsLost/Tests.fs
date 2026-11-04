@@ -12,7 +12,7 @@ let private rejects name result =
 
 /// Checks a numeric result against an absolute tolerance.
 let private near name expected actual =
-    if abs (expected - actual) > 1e-10 then failwith $"{name}: expected {expected}, got {actual}."
+    if not (System.Double.IsFinite actual) || abs (expected - actual) > 1e-10 then failwith $"{name}: expected {expected}, got {actual}."
 
 /// Checks a scientific invariant with an explicit test name.
 let private check name condition =
@@ -30,29 +30,34 @@ let private age value = AttainedAge.create value |> ok
 /// Creates a validated survival-probability fixture.
 let private survival value = SurvivalProbability.create value |> ok
 
-/// Creates the Figure 2 evidence with the published life-expectancy difference of 18.6 years.
-let private figureEvidence attained = {
+/// Creates synthetic incidence evidence independently of the paper example.
+let private syntheticEvidence attained = {
     Endpoint = Linear LungCancer
     Sex = Female
     Age = age attained
-    SurvivorSurvival = survival 0.54
-    Consequence = IncidentEvent (IncidenceHazard.create 0.0013<1/year> |> ok, life 20.0<year>, life 1.4<year>)
+    SurvivorSurvival = survival 0.5
+    Consequence = IncidentEvent (IncidenceHazard.create 0.01<1/year> |> ok, life 20.0<year>, life 5.0<year>)
 }
 
 /// Runs scientific regression and boundary tests using independent expected quantities.
 let run () =
     let exposure = ExposureAge.create 4.0<year> |> ok
-    // Figure transcription only, not a general sex-adjustment rule.
-    let figureRatio = ExcessHazardRatio.create (0.194 * 9.4 * 1.21) |> ok
-    let unmodifiedRatio = ExcessHazardRatio.create (0.194 * 9.4) |> ok
-    let figure = LifeLoss.atAge exposure Female (Linear LungCancer) figureRatio (figureEvidence 60.0<year>) |> ok
-
-    near "Unrounded Figure 2 excess ratio" 2.206556 (ExcessHazardRatio.value figure.ExcessRatio)
-    near "Figure 2 excess incidence hazard" 0.0028685228 (ExcessEventHazard.value figure.ExcessEventHazard |> float)
-    near "Figure 2 survival-weighted rate" (0.0028685228 * 0.54) (AnnualRate.value figure.SurvivalWeightedExcessRate |> float)
-    near "Figure 2 printed staged rounding" 0.0279 (0.0015 * 18.6)
-    near "Figure 2 density from unrounded inputs" (0.194 * 9.4 * 1.21 * 0.0013 * 0.54 * 18.6) (LifeLossDensity.value figure.Density)
-    check "Unrounded Figure 2 inputs round to 0.029 rather than the printed 0.028" (System.Math.Round(LifeLossDensity.value figure.Density, 3) = 0.029)
+    let suppliedMultiplier = ExcessHazardMultiplier.create 1.5 "Synthetic test input; not a published estimate." |> ok
+    let unmodifiedRatio = ExcessHazardRatio.create 2.0 |> ok
+    let adjustedRatio = ExcessHazardMultiplier.apply suppliedMultiplier unmodifiedRatio |> ok
+    let incidenceLoss = LifeLoss.atAge exposure Female (Linear LungCancer) adjustedRatio (syntheticEvidence 60.0<year>) |> ok
+    near "Supplied multiplier scales excess HR" 3.0 (ExcessHazardRatio.value adjustedRatio)
+    near "Synthetic excess incidence hazard" 0.03 (ExcessEventHazard.value incidenceLoss.ExcessEventHazard |> float)
+    near "Synthetic survival-weighted incidence" 0.015 (AnnualRate.value incidenceLoss.SurvivalWeightedExcessRate |> float)
+    near "Synthetic loss density" 0.225 (LifeLossDensity.value incidenceLoss.Density)
+    rejects "Multiplier requires provenance" (ExcessHazardMultiplier.create 1.5 "")
+    rejects "Negative multiplier" (ExcessHazardMultiplier.create -1.0 "Synthetic assumption.")
+    let reported = Brodin2012.reportedSexComparison (Linear LungCancer) |> ok |> Option.get
+    check "Reported comparison does not claim hazard-ratio semantics" (ReportedSexComparison.measure reported = UnspecifiedRiskComparison)
+    let suppliedSlope = 0.2<1/Gy>
+    near "Supplied linear slope" 2.0 (DoseResponse.linear suppliedSlope (dose 10.0<Gy>) |> ok |> ExcessHazardRatio.value)
+    rejects "Negative response coefficient" (DoseResponse.linear -0.2<1/Gy> (dose 10.0<Gy>))
+    rejects "Negative nonlinear falloff" (ThyroidParameters.create 1.0<1/Gy> -0.01<1/Gy^2>)
 
     let excess = ExcessHazardRatio.create 2.0 |> ok
     let total = HazardRatio.ofExcess excess |> ok
@@ -82,6 +87,8 @@ let run () =
     let scaled = DifferentialDvh.ofAbsoluteVolumes [{ Dose = dose 0.0<Gy>; Volume = 100.0<cm3> }; { Dose = dose 20.0<Gy>; Volume = 100.0<cm3> }] |> ok
     /// Evaluates the thyroid response for a test histogram.
     let thyroid dvh = Brodin2012.unmodifiedExcessHazardRatio exposure (ThyroidDvh dvh) |> ok |> ExcessHazardRatio.value
+    let suppliedThyroid = ThyroidParameters.create 0.5<1/Gy> 0.002<1/Gy^2> |> ok
+    near "Supplied nonlinear coefficients" (0.5 * 0.5 * 20.0 * exp (-0.002 * 400.0)) (DoseResponse.thyroid suppliedThyroid fractional |> ok |> ExcessHazardRatio.value)
     near "Thyroid direct voxel average" (0.5 * 2.21 * 20.0 * exp (-0.00164 * 400.0)) (thyroid fractional)
     near "Absolute and fractional DVH equivalence" (thyroid fractional) (thyroid absolute)
     near "Organ-volume scale invariance" (thyroid fractional) (thyroid scaled)
@@ -93,23 +100,23 @@ let run () =
     rejects "Zero organ volume" (DifferentialDvh.ofAbsoluteVolumes [{ Dose = dose 1.0<Gy>; Volume = 0.0<cm3> }])
     rejects "Thyroid adult extrapolation" (Brodin2012.thyroidParameters (ExposureAge.create 20.0<year> |> ok))
 
-    let hfEvidence = { figureEvidence 60.0<year> with Endpoint = Linear HeartFailure; Consequence = FatalHeartFailure (MortalityHazard.create 0.001<1/year> |> ok, life 20.0<year>) }
+    let hfEvidence = { syntheticEvidence 60.0<year> with Endpoint = Linear HeartFailure; Consequence = FatalHeartFailure (MortalityHazard.create 0.001<1/year> |> ok, life 20.0<year>) }
     let hf = LifeLoss.atAge exposure Female (Linear HeartFailure) (ExcessHazardRatio.create 1.17 |> ok) hfEvidence |> ok
-    near "Equation 4 uses excess mortality, not all baseline mortality" (0.54 * 1.17 * 0.001 * 20.0) (LifeLossDensity.value hf.Density)
-    rejects "HF incidence cannot enter mortality pathway" (LifeLoss.atAge exposure Female (Linear HeartFailure) (ExcessHazardRatio.create 1.17 |> ok) { hfEvidence with Consequence = (figureEvidence 60.0<year>).Consequence })
+    near "Equation 4 uses excess mortality, not all baseline mortality" (0.5 * 1.17 * 0.001 * 20.0) (LifeLossDensity.value hf.Density)
+    rejects "HF incidence cannot enter mortality pathway" (LifeLoss.atAge exposure Female (Linear HeartFailure) (ExcessHazardRatio.create 1.17 |> ok) { hfEvidence with Consequence = (syntheticEvidence 60.0<year>).Consequence })
     rejects "Population endpoint mismatch" (LifeLoss.atAge exposure Female (Linear LungCancer) unmodifiedRatio hfEvidence)
-    rejects "Population sex mismatch" (LifeLoss.atAge exposure Male (Linear LungCancer) unmodifiedRatio (figureEvidence 60.0<year>))
-    rejects "Event before irradiation" (LifeLoss.atAge exposure Female (Linear LungCancer) unmodifiedRatio (figureEvidence 3.0<year>))
-    rejects "Negative life shortening" (LifeLoss.atAge exposure Female (Linear LungCancer) unmodifiedRatio { figureEvidence 60.0<year> with Consequence = IncidentEvent (baseline, life 1.0<year>, life 2.0<year>) })
+    rejects "Population sex mismatch" (LifeLoss.atAge exposure Male (Linear LungCancer) unmodifiedRatio (syntheticEvidence 60.0<year>))
+    rejects "Event before irradiation" (LifeLoss.atAge exposure Female (Linear LungCancer) unmodifiedRatio (syntheticEvidence 3.0<year>))
+    rejects "Negative life shortening" (LifeLoss.atAge exposure Female (Linear LungCancer) unmodifiedRatio { syntheticEvidence 60.0<year> with Consequence = IncidentEvent (baseline, life 1.0<year>, life 2.0<year>) })
 
     let window = IntegrationWindow.create exposure 1.0<year> (age 15.0<year>) |> ok
     /// Evaluates a constant synthetic age-specific evidence grid.
-    let sample attained = LifeLoss.atAge exposure Female (Linear LungCancer) figureRatio (figureEvidence attained) |> ok
-    let constantDensity = LifeLossDensity.value figure.Density
+    let sample attained = LifeLoss.atAge exposure Female (Linear LungCancer) adjustedRatio (syntheticEvidence attained) |> ok
+    let constantDensity = LifeLossDensity.value incidenceLoss.Density
     near "Constant integrand over ten years" (constantDensity * 10.0) (LifeLoss.integrate window [sample 5.0<year>; sample 15.0<year>] |> ok |> ExpectedLifeYearsLost.value |> float)
     near "Irregular age grid gives same constant integral" (constantDensity * 10.0) (LifeLoss.integrate window [sample 5.0<year>; sample 7.0<year>; sample 15.0<year>] |> ok |> ExpectedLifeYearsLost.value |> float)
-    let alternative = LifeLoss.atAge exposure Female (Linear LungCancer) unmodifiedRatio (figureEvidence 15.0<year>) |> ok
-    rejects "Mixed dose-response contexts" (LifeLoss.integrate window [sample 5.0<year>; alternative])
+    let alternative = LifeLoss.atAge exposure Female (Linear LungCancer) unmodifiedRatio (syntheticEvidence 15.0<year>) |> ok
+    near "Attained-age-dependent excess HR can be integrated" 1.875 (LifeLoss.integrate window [sample 5.0<year>; alternative] |> ok |> ExpectedLifeYearsLost.value |> float)
     rejects "Missing lower bound" (LifeLoss.integrate window [sample 6.0<year>; sample 15.0<year>])
     rejects "Duplicate ages" (LifeLoss.integrate window [sample 5.0<year>; sample 5.0<year>; sample 15.0<year>])
     rejects "Unsorted ages" (LifeLoss.integrate window [sample 5.0<year>; sample 9.0<year>; sample 7.0<year>; sample 15.0<year>])
