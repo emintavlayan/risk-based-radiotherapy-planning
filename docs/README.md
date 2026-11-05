@@ -37,3 +37,7 @@ The tests check synthetic calculations, numerical invariants, invalid inputs and
 
 - [Risk and hazard relationships](risk-and-hazard.md).
 - [Research questions and interpretation notes](research-questions.md), kept separately from the software's operating documentation.
+
+## Article comparisons
+
+- [Rechner 2020 compared with the LifeYearsLost domain](rechner-2020-comparison.md): equations, shared components, endpoint and parameter differences, mortality weighting, target-control coupling, and unresolved reproduction questions.
