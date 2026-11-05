@@ -15,6 +15,10 @@ jobs:
             - uses: actions/setup-node@v4
               with:
                   node-version: 22
+            - name: Compile and run scientific domain checks
+              run: dotnet run --project tests/LifeYearsLost/LifeYearsLost.Tests.fsproj
+            - name: Verify compile-time unit and hazard distinctions
+              run: bash tests/LifeYearsLost/check-types.sh
             - name: Compile and run infrastructure test harnesses
               run: dotnet run -- RunTestsHeadless
             - name: Build runnable server and client bundle

@@ -1,6 +1,6 @@
 # Risk-Based Radiotherapy Planning
 
-**Work in progress.** This repository is a fresh F# / SAFE foundation for a life-years-lost application. Scientific domain modelling and calculation workflows have not yet been implemented.
+**Work in progress.** An F# / SAFE application for modelling radiation-related late effects as expected life years lost. The scientific domain uses explicit quantities, units of measure and pure calculation functions, with publication-specific parameters kept in separate adapters.
 
 The previous calculator and published-model catalogue are preserved in [NTCP Explorer](https://github.com/emintavlayan/ntcp-explorer).
 
@@ -9,13 +9,27 @@ The previous calculator and published-model catalogue are preserved in [NTCP Exp
 - Fable / Elmish client with a minimal application screen.
 - Saturn server, typed infrastructure API and shared contracts.
 - Existing development, packaging and test harnesses.
-- No scientific inputs, equations, coefficients or numerical results.
+- Independent LifeYearsLost domain with typed hazards, dose responses, survival weighting and numerical integration.
+- [Domain and source-code guide](docs/README.md).
+- No clinical calculation workflow or loaded population datasets.
 
-## Next work
+## Scientific domain
 
-Review the source papers together, agree terminology and notation, then develop small explicit domain types and pure calculation functions. Keep paper symbols, units, assumptions and source references traceable. Verify numerical examples before introducing application workflows.
+[Workflow diagrams](docs/workflow.md) connect the scientific calculation to exact domain functions and types.
 
-Use small modules, single-line `///` documentation for every function, and `Result<_, string>` with `FsToolkit.ErrorHandling` for fallible workflows. No domain design is implied by the infrastructure API.
+Start with the [documentation guide](docs/README.md). It maps the clinical vocabulary, calculation flow and units to the F# files. The current [Brodin 2012 adapter](docs/brodin-2012/README.md) supplies one set of publication-specific parameters.
+
+```sh
+dotnet run --project tests/LifeYearsLost/LifeYearsLost.Tests.fsproj
+```
+
+The domain tests use synthetic inputs to verify equations and invariants. Coefficients, population data and modifiers are explicit inputs with source information.
+
+## Repository workflow
+
+Use `main` for ongoing domain modelling, code and documentation. Create another branch only when explicitly requested. The earlier calculator and catalogue belong to [NTCP Explorer](https://github.com/emintavlayan/ntcp-explorer).
+
+The Brodin domain and research documents have been consolidated into `main`. Historical branches are retained in commit ancestry; the old NTCP screenshot tooling is not part of the current application.
 
 ## Development
 
@@ -32,7 +46,7 @@ dotnet run -- RunTestsHeadless
 dotnet run -- Bundle
 ```
 
-The test harness currently contains empty suites. Passing them establishes no scientific validation. GitHub Actions compiles the solution, runs the harness and packages the server and client.
+The retained infrastructure suites are empty. The separate scientific suite exercises the domain equations, numerical invariants and invalid inputs; it does not establish clinical validity. GitHub Actions runs it and compile-time misuse checks before the infrastructure build and bundle.
 
 ## Layout
 
@@ -41,6 +55,8 @@ The test harness currently contains empty suites. Passing them establishes no sc
 | src/Client | Minimal client and styling |
 | src/Server | Infrastructure host and status API |
 | src/Shared | Infrastructure contracts |
+| src/LifeYearsLost | Independent scientific domain |
+| docs | Domain guide, model references and separate research notes |
 | tests | Retained test harnesses |
 | Build.fs | Development and packaging commands |
 
