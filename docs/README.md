@@ -41,3 +41,7 @@ The tests check synthetic calculations, numerical invariants, invalid inputs and
 ## Article comparisons
 
 - [Rechner 2020 compared with the LifeYearsLost domain](rechner-2020-comparison.md): equations, shared components, endpoint and parameter differences, mortality weighting, target-control coupling, and unresolved reproduction questions.
+
+## External repository comparisons
+
+- [Nine LYL, survival and radiation-risk repository reviews](lyl-repository-comparisons/README.md): formulation, code observations, similarities, differences, possible uses and verification limits.
