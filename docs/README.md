@@ -4,6 +4,8 @@ The application models radiation-related late effects as expected life years los
 
 ## Read the domain
 
+Start with the [scientific workflow and detailed code maps](workflow.md).
+
 1. [Domain vocabulary and calculation flow](domain.md): inputs, quantities, units and equations.
 2. Read the source files in the order below.
 3. [Brodin 2012 model adapter](brodin-2012/README.md): publication-specific coefficients and source references.

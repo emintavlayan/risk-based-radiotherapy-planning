@@ -15,6 +15,8 @@ The previous calculator and published-model catalogue are preserved in [NTCP Exp
 
 ## Scientific domain
 
+[Workflow diagrams](docs/workflow.md) connect the scientific calculation to exact domain functions and types.
+
 Start with the [documentation guide](docs/README.md). It maps the clinical vocabulary, calculation flow and units to the F# files. The current [Brodin 2012 adapter](docs/brodin-2012/README.md) supplies one set of publication-specific parameters.
 
 ```sh
